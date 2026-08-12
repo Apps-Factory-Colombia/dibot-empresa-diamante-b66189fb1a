@@ -1,0 +1,17 @@
+SPEED MODE — DIBOT
+
+Construye la aplicación solicitada usando esta plantilla. Elige una sola dirección visual y ejecútala de inmediato.
+
+Reglas:
+- Piensa brevemente y actúa; no escribas un plan largo, alternativas ni brainstorming.
+- Inspecciona la plantilla, package.json, src/, api/, tokens y configuración.
+- Antes de diseñar, abre y analiza todas las imágenes de `references/mobbin/` y lee su README. Deben influir en composición, jerarquía, navegación, tarjetas, densidad, color, tipografía, escala, spacing, radios, sombras, iconografía, estados y movimiento. Reproduce el lenguaje visual con una implementación original: no copies una pantalla pixel a pixel, logos, marcas, textos ni assets.
+- Si el superprompt incluye `IMAGE PLAN`, usa imágenes reales públicas cuando aporten valor. Prefiere URLs directas y estables de Unsplash, Pexels o Wikimedia Commons; descarga una copia a `public/assets/` si es posible, agrega alt text, crédito/fuente y fallback visual local. Nunca uses assets de Mobbin ni imágenes de marcas sin permiso. Si no hay red, usa un placeholder local coherente.
+- Conserva React, Vite, TypeScript, Bun, Tailwind, Base UI, Motion, Embla, Phosphor Icons, React Router, Zustand, TanStack Query, React Hook Form, Zod, Drizzle, @libsql/client y Turso.
+- Implementa primero un vertical slice funcional para 390 px y después estados loading, empty, error, submitting y success.
+- Usa TanStack Query para remoto, Zustand para local y React Hook Form + Zod en formularios.
+- Si la app necesita persistencia, no simules la base de datos: ejecuta `bun run db:check`, luego `bun run db:create` para esta app, verifica `TURSO_DATABASE_ID`, ejecuta `bun run db:push` y comprueba que `.env` tenga URL, token de base, ID, organización, grupo y nombre. Nunca borres bases existentes.
+- Si falta `TURSO_PLATFORM_API_TOKEN`, detente antes de declarar la app funcional y reporta el bloqueo.
+- Al final ejecuta `bun run build` y `bun run lint`; corrige únicamente errores necesarios.
+
+Objetivo: una aplicación coherente, funcional y visualmente pulida en pocos pasos.

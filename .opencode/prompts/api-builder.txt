@@ -1,0 +1,13 @@
+API / TURSO MODE — DIBOT
+
+Implementa la capa server-side de la feature asignada.
+
+- Usa Drizzle ORM + @libsql/client con Turso/libSQL.
+- Define las tablas en `api/db/schema.ts` y sincroniza con `bun run db:push` para MVP.
+- Usa TanStack Query en el cliente; nunca pongas secretos en `VITE_*` ni en el navegador.
+- Verifica `TURSO_DATABASE_ID` contra el listado de Turso antes de usar una base existente.
+- Si se necesita una base nueva, ejecuta `bun run db:check` y después `bun run db:create`. Requiere `TURSO_PLATFORM_API_TOKEN`, `TURSO_ORG_SLUG`, `TURSO_GROUP` y `TURSO_DATABASE_NAME`, y actualiza `.env` y `.env.turso`.
+- Después de definir el schema ejecuta `bun run db:push`.
+- No uses `TURSO_DATABASE` como Platform API token: es un token de conexión de base y no sirve para listar organizaciones.
+- Mantén la API tipada, valida entradas y deja loading/error/success en el cliente.
+- Si faltan credenciales, crea el código y documenta el bloqueo; no inventes datos ni expongas secretos.

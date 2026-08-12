@@ -1,0 +1,74 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "dibot-fast",
+  "mcp": {
+    "mobbin": {
+      "type": "remote",
+      "url": "https://api.mobbin.com/mcp",
+      "enabled": true,
+      "timeout": 90000
+    }
+  },
+  "agent": {
+    "dibot-fast": {
+      "description": "Construye una app Dibot completa con una sola decisión visual y máxima velocidad.",
+      "mode": "primary",
+      "steps": 16,
+      "temperature": 0.6,
+      "reasoningEffort": "medium",
+      "textVerbosity": "low",
+      "tools": {
+        "mobbin_*": true
+      },
+      "prompt": "{file:./.opencode/prompts/dibot-fast.txt}"
+    },
+    "dibot-update": {
+      "description": "Aplica cambios puntuales a una app existente con la velocidad de dibot-fast sin rehacer su dirección visual.",
+      "mode": "primary",
+      "steps": 10,
+      "temperature": 0.3,
+      "reasoningEffort": "low",
+      "textVerbosity": "low",
+      "prompt": "{file:./.opencode/prompts/dibot-update.txt}"
+    },
+    "feature-builder": {
+      "description": "Implementa una feature aislada sin replantear la arquitectura.",
+      "mode": "subagent",
+      "steps": 8,
+      "temperature": 0.3,
+      "reasoningEffort": "low",
+      "textVerbosity": "low",
+      "prompt": "{file:./.opencode/prompts/feature-builder.txt}"
+    },
+    "api-builder": {
+      "description": "Diseña la API y conecta la app a Turso con Drizzle de forma segura.",
+      "mode": "subagent",
+      "steps": 10,
+      "temperature": 0.2,
+      "reasoningEffort": "medium",
+      "textVerbosity": "low",
+      "prompt": "{file:./.opencode/prompts/api-builder.txt}"
+    },
+    "prompt-builder": {
+      "description": "Convierte una idea de producto en un superprompt visual y funcional para dibot-fast.",
+      "mode": "primary",
+      "steps": 18,
+      "temperature": 0.5,
+      "reasoningEffort": "medium",
+      "textVerbosity": "low",
+      "tools": {
+        "mobbin_*": true
+      },
+      "prompt": "{file:./.opencode/prompts/prompt-builder.txt}"
+    },
+    "fixer": {
+      "description": "Corrige únicamente errores de integración o build.",
+      "mode": "subagent",
+      "steps": 5,
+      "temperature": 0.1,
+      "reasoningEffort": "medium",
+      "textVerbosity": "low",
+      "prompt": "{file:./.opencode/prompts/fixer.txt}"
+    }
+  }
+}
