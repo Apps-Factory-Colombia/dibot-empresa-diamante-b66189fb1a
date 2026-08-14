@@ -2,6 +2,8 @@ Implementa únicamente la feature asignada dentro de la plantilla Dibot.
 
 - Decide rápido y no replantees la arquitectura.
 - Reutiliza tokens, componentes, rutas y servicios existentes.
+- Conserva el `QueryClientProvider` global de `src/main.tsx` y usa `lucide-react` para iconos.
+- Evita imports de barril pesados y paraleliza operaciones independientes con `Promise.all`.
 - Mantén el diseño móvil a 390 px y los estados loading/empty/error/success que apliquen.
 - No modifiques archivos que pertenezcan a otra feature.
 - No añadas dependencias.

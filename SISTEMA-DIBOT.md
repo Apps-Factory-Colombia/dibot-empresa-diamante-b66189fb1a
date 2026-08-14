@@ -23,7 +23,7 @@ dibot-fast
       ├── API y schema en api/
       ├── base nueva en Turso si hace falta
       ├── sincronización con db:push
-      └── bun run build + bun run lint
+      └── bun run dibot:verify
       ↓
 App funcional
 ```
@@ -31,7 +31,7 @@ App funcional
 Para cambios posteriores:
 
 ```text
-Petición de cambio → dibot-update → modificación puntual → build + lint
+Petición de cambio → dibot-fast (UPDATE MODE) → modificación puntual → verificación completa
 ```
 
 ## 3. Agentes disponibles
@@ -55,19 +55,11 @@ No construye la app. Su salida debe ser el superprompt y las referencias guardad
 
 ### `dibot-fast`
 
-Es el agente principal para crear una app completa. Debe leer el superprompt, abrir todas las imágenes de `references/mobbin/`, elegir una dirección visual, implementar el flujo principal, añadir estados, configurar Turso si hace falta y ejecutar build/lint.
+Es el único agente principal para crear, actualizar y reparar una app completa. No tiene límite fijo de pasos. Debe implementar frontend, API, schema, seed y corregir hasta que `bun run dibot:verify` pase.
 
 Las referencias sirven para extraer el lenguaje visual, no para copiar literalmente pantallas, marcas, logos, textos o assets.
 
-### `dibot-update`
-
-Es el agente para modificaciones rápidas sobre una app existente. Úsalo para peticiones como “agrega favoritos”, “cambia el color del botón”, “añade un filtro” o “cambia este texto”. Conserva la dirección visual y modifica solo lo relacionado con la petición.
-
-```powershell
-opencode run --agent dibot-update "Agrega favoritos a los productos. Conserva el diseño existente y ejecuta build y lint."
-```
-
-Si el cambio necesita base de datos, actualiza el schema y ejecuta `db:push`.
+Para modificaciones rápidas, el workflow llama al mismo `dibot-fast` con `UPDATE MODE`. Conserva la dirección visual, la API y el ID de Turso, y modifica solo lo relacionado con la petición.
 
 ### `feature-builder`
 
@@ -76,10 +68,6 @@ Agente auxiliar para implementar una feature aislada sin cambiar toda la arquite
 ### `api-builder`
 
 Agente auxiliar para crear tablas, acceso server-side y endpoints. Usa Drizzle ORM, `@libsql/client`, Turso y validación de datos.
-
-### `fixer`
-
-Agente auxiliar para corregir errores concretos de integración o build. No debe rediseñar la app.
 
 ## 4. Flujo recomendado para crear una app
 
@@ -216,11 +204,15 @@ OpenCode ofrece HTTP y SSE localmente. HTTPS requiere un reverse proxy o túnel 
 |---|---|
 | `bun install` | Instala dependencias. |
 | `bun run dev` | Inicia Vite en desarrollo. |
-| `bun run build` | Compila TypeScript y Vite. |
+| `bun run build` | Compila TypeScript y Vite en paralelo y bundlea entradas server-side con esbuild. |
 | `bun run lint` | Ejecuta ESLint. |
+| `bun run verify:contracts` | Verifica provider global de React Query, QueryClient único y migración a lucide-react. |
+| `bun run dibot:verify` | Ejecuta build y lint como validación obligatoria de entrega. |
+| `bun run analyze` | Analiza el metafile de esbuild generado en `dist/esbuild-metafile.json`. |
 | `bun run preview` | Sirve el build compilado. |
 | `bun run db:check` | Verifica organización, grupo e ID de Turso. |
 | `bun run db:create` | Crea una base nueva y actualiza `.env`. |
+| `bun run db:verify` | Comprueba la conexión real a Turso cuando la app declara persistencia. |
 | `bun run db:push` | Sincroniza el schema Drizzle con Turso. |
 | `bun run db:generate` | Genera migraciones Drizzle. |
 | `bun run db:migrate` | Ejecuta migraciones. |
@@ -255,7 +247,7 @@ Comprueba que `bun run db:check` encuentre el ID configurado, que `api/db/schema
 
 ### Un cambio rediseñó demasiado la app
 
-Usa `dibot-update` y escribe explícitamente:
+Usa el workflow en `update` y escribe explícitamente:
 
 ```text
 Aplica únicamente este cambio. Conserva colores, tipografía, spacing,
@@ -265,4 +257,4 @@ no relacionadas.
 
 ## 10. Regla práctica
 
-Usa `prompt-builder` para crear desde una idea, `dibot-fast` para construir el producto completo y `dibot-update` para modificarlo después. Mantén las referencias visuales junto al superprompt, usa imágenes reales públicas con crédito cuando aporten valor y deja toda credencial Turso en server-side.
+Usa `prompt-builder` para crear desde una idea y `dibot-fast` para construir, actualizar y reparar. Mantén las referencias visuales junto al superprompt y toda credencial Turso en server-side.

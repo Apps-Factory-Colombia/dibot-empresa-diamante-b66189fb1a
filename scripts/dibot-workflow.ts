@@ -1,0 +1,393 @@
+import { config as loadEnv } from 'dotenv'
+import { spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+
+loadEnv()
+
+type JsonObject = Record<string, unknown>
+type Mode = 'create' | 'update'
+type WorkflowInput = { userId: string; appId: string; appName: string; mode: Mode; prompt: string }
+
+const root = process.cwd()
+const superPromptCacheDir = join(root, '.dibot-runtime', 'superprompts')
+
+class CommandError extends Error {
+  readonly output: string
+
+  constructor(message: string, output: string) {
+    super(message)
+    this.output = output
+  }
+}
+
+function formatDuration(durationMs: number) {
+  const totalTenths = Math.round(durationMs / 100)
+  if (totalTenths < 600) return `${(totalTenths / 10).toFixed(1)} s`
+  const minutes = Math.floor(totalTenths / 600)
+  const seconds = (totalTenths % 600) / 10
+  return `${minutes} min ${seconds.toFixed(1)} s`
+}
+
+function required(name: string) {
+  const value = process.env[name]?.trim()
+  if (!value) throw new Error(`Falta ${name} en .env.`)
+  return value
+}
+
+function firstString(value: unknown, keys: string[]): string | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const object = value as JsonObject
+  for (const key of keys) {
+    const candidate = object[key]
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim()
+  }
+  for (const child of Object.values(object)) {
+    const result: string | undefined = firstString(child, keys)
+    if (result) return result
+  }
+  return undefined
+}
+
+function redact(value: string) {
+  return ['DIBOT_AGENT_API_TOKEN', 'OPENAI_API_KEY', 'GITHUB_TOKEN', 'TURSO_AUTH_TOKEN', 'TURSO_PLATFORM_API_TOKEN', 'DOKPLOY_API_KEY']
+    .reduce((result, name) => {
+      const secret = process.env[name]
+      return secret ? result.split(secret).join('***REDACTED***') : result
+    }, value)
+}
+
+function slug(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+function parseInput(args: string[]): WorkflowInput {
+  const flags = new Map<string, string>()
+  const positional: string[] = []
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]
+    if (!arg.startsWith('--')) {
+      positional.push(arg)
+      continue
+    }
+    const separator = arg.indexOf('=')
+    if (separator > 2) {
+      flags.set(arg.slice(0, separator), arg.slice(separator + 1))
+      continue
+    }
+    flags.set(arg, args[index + 1] ?? '')
+    index += 1
+  }
+
+  const userId = flags.get('--user-id') ?? positional[0]
+  const appId = flags.get('--app-id') ?? positional[1]
+  const appName = flags.get('--app-name') ?? positional[2]
+  const mode = flags.get('--mode') ?? positional[3]
+  const prompt = flags.get('--prompt') ?? positional.slice(4).join(' ')
+  if (!userId || !appId || !appName?.trim() || !mode || !prompt.trim()) {
+    throw new Error('Uso: bun run dibot:workflow -- <userId> <appId> "<appName>" <create|update> "<prompt>"')
+  }
+  if (mode !== 'create' && mode !== 'update') throw new Error('mode debe ser create o update.')
+  return { userId, appId, appName: appName.trim(), mode, prompt: prompt.trim() }
+}
+
+function childEnv(extra: NodeJS.ProcessEnv = {}) {
+  return { ...process.env, DIBOT_REQUIRE_PERSISTENCE: '1', DIBOT_REQUIRE_SEED: '1', ...extra }
+}
+
+async function run(command: string, args: string[], cwd: string, extraEnv: NodeJS.ProcessEnv = {}) {
+  console.log(`\n$ ${redact(`${command} ${args.join(' ')}`)}`)
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(command, args, { cwd, env: childEnv(extraEnv), stdio: 'inherit', windowsHide: true })
+    child.once('error', reject)
+    child.once('exit', (code, signal) => code === 0 ? resolve() : reject(new Error(`${command} terminó con código ${code ?? 'null'}${signal ? ` (${signal})` : ''}.`)))
+  })
+}
+
+async function runCapture(command: string, args: string[], cwd: string, extraEnv: NodeJS.ProcessEnv = {}) {
+  console.log(`\n$ ${redact(`${command} ${args.join(' ')}`)}`)
+  return await new Promise<string>((resolve, reject) => {
+    const child = spawn(command, args, { cwd, env: childEnv(extraEnv), stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true })
+    let output = ''
+    child.stdout.on('data', (chunk: Buffer) => { const text = chunk.toString(); output += text; process.stdout.write(text) })
+    child.stderr.on('data', (chunk: Buffer) => { const text = chunk.toString(); output += text; process.stderr.write(text) })
+    child.once('error', reject)
+    child.once('exit', (code, signal) => {
+      if (code === 0) resolve(output)
+      else reject(new CommandError(`${command} terminó con código ${code ?? 'null'}${signal ? ` (${signal})` : ''}.`, redact(output)))
+    })
+  })
+}
+
+async function getSuperPrompt(input: WorkflowInput) {
+  const prompt = `Nombre obligatorio de la aplicación: ${input.appName}\n\n${input.prompt}`
+  const cacheKey = createHash('sha256').update(`superprompt-v3\n${prompt}`).digest('hex').slice(0, 24)
+  const cachePath = join(superPromptCacheDir, `${cacheKey}.txt`)
+  try {
+    const cached = await readFile(cachePath, 'utf8')
+    if (cached.trim()) {
+      console.log(`\n[cache] Superprompt reutilizado: ${cacheKey}`)
+      return { content: cached, cached: true }
+    }
+  } catch {
+    // Cache miss.
+  }
+
+  const rawOutput = await runCapture('opencode', [...openCodeBase(), '--agent', 'prompt-builder', prompt], root)
+  const blocks = [...rawOutput.matchAll(/```text\s*([\s\S]*?)```/g)]
+  const content = blocks.at(-1)?.[1].trim() ?? rawOutput.trim()
+  if (content.trim()) {
+    await mkdir(superPromptCacheDir, { recursive: true })
+    await writeFile(cachePath, content, 'utf8')
+  }
+  return { content, cached: false }
+}
+
+class JsonApi {
+  private readonly baseUrl: string
+  private readonly headers: Record<string, string>
+
+  constructor(url: string, headers: Record<string, string>) {
+    this.baseUrl = url.startsWith('http') ? url.replace(/\/$/, '') : `https://${url.replace(/\/$/, '')}`
+    this.headers = headers
+  }
+
+  async request<T = unknown>(route: string, init: RequestInit = {}) {
+    const response = await fetch(`${this.baseUrl}/${route.replace(/^\//, '')}`, {
+      ...init,
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...this.headers, ...init.headers },
+    })
+    const text = await response.text()
+    let body: unknown
+    try { body = text ? JSON.parse(text) : {} } catch { body = { raw: text } }
+    if (!response.ok) throw new Error(`API ${response.status}: ${firstString(body, ['message', 'error', 'code']) ?? response.statusText}`)
+    return body as T
+  }
+}
+
+class DibotReporter {
+  private jobId: string | undefined
+  private readonly input: WorkflowInput
+  private readonly api = new JsonApi(required('DIBOT_API_URL'), { Authorization: `Bearer ${required('DIBOT_AGENT_API_TOKEN')}` })
+
+  constructor(input: WorkflowInput) { this.input = input }
+
+  async start() {
+    const result = await this.api.request('dibot/agent-jobs', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: this.input.userId,
+        appId: this.input.appId,
+        type: 'implementation',
+        executor: 'dibot-fast',
+        instruction: `${this.input.appName}: ${this.input.prompt}`,
+        status: 'running',
+        currentStep: 'Preparando base Turso y OpenCode',
+        tasks: [
+          { name: 'Preparar aplicación y Turso', position: 1, status: 'running' },
+          { name: 'Construir frontend, API y seed', position: 2, status: 'pending' },
+          { name: 'Verificar base, esbuild, runtime y lint', position: 3, status: 'pending' },
+          { name: 'Reportar finalización', position: 4, status: 'pending' },
+        ],
+      }),
+    })
+    this.jobId = firstString(result, ['jobId', 'id'])
+    if (!this.jobId) throw new Error('DIBOT_AGENT_DATA_API no devolvió jobId.')
+  }
+
+  async update(currentStep: string) {
+    if (!this.jobId) return
+    await this.api.request(`dibot/agent-jobs/${encodeURIComponent(this.jobId)}`, { method: 'PATCH', body: JSON.stringify({ currentStep }) })
+  }
+
+  async complete(result: JsonObject) {
+    if (!this.jobId) return
+    await this.api.request(`dibot/agent-jobs/${encodeURIComponent(this.jobId)}`, { method: 'PATCH', body: JSON.stringify({ status: 'completed', currentStep: 'App, API, Turso y build verificados', result }) })
+  }
+
+  async fail(error: unknown) {
+    if (!this.jobId) return
+    const message = error instanceof Error ? error.message : String(error)
+    try {
+      await this.api.request(`dibot/agent-jobs/${encodeURIComponent(this.jobId)}`, { method: 'PATCH', body: JSON.stringify({ status: 'failed', currentStep: `Workflow falló: ${redact(message)}` }) })
+    } catch (reportError) {
+      console.error(`No se pudo reportar el fallo: ${reportError instanceof Error ? reportError.message : String(reportError)}`)
+    }
+  }
+
+  get id() { return this.jobId }
+}
+
+function controlApi() {
+  return new JsonApi(required('DIBOT_API_URL'), { Authorization: `Bearer ${required('DIBOT_AGENT_API_TOKEN')}` })
+}
+
+async function findRegisteredApp(input: WorkflowInput) {
+  try { return await controlApi().request(`dibot/apps/${encodeURIComponent(input.appId)}`) }
+  catch (error) {
+    if (error instanceof Error && error.message.startsWith('API 404')) return undefined
+    throw error
+  }
+}
+
+async function registerApp(input: WorkflowInput) {
+  try {
+    return await controlApi().request('dibot/apps', {
+      method: 'POST',
+      body: JSON.stringify({ userId: input.userId, appId: input.appId, appName: input.appName, status: 'creating', lastRequest: { source: 'template', userPrompt: input.prompt } }),
+    })
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('API 409')) throw new Error(`La app ${input.appId} ya existe; create no reutiliza apps.`, { cause: error })
+    throw error
+  }
+}
+
+function openCodeBase() {
+  const base = ['run']
+  const attach = process.env.OPENCODE_ATTACH_URL?.trim()
+  if (attach) base.push('--attach', attach)
+  return base
+}
+
+async function applyAppMetadata(input: WorkflowInput) {
+  const manifest = JSON.parse(await readFile('package.json', 'utf8')) as JsonObject
+  manifest.name = slug(input.appName) || `dibot-${slug(input.appId)}`
+  await writeFile('package.json', `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+
+  const html = await readFile('index.html', 'utf8')
+  await writeFile('index.html', html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${input.appName}</title>`), 'utf8')
+
+  await mkdir(join(root, '.dibot-runtime'), { recursive: true })
+  await writeFile(join(root, '.dibot-runtime', 'app.json'), `${JSON.stringify({ userId: input.userId, appId: input.appId, appName: input.appName, mode: input.mode }, null, 2)}\n`, 'utf8')
+  process.env.DIBOT_APP_NAME = input.appName
+}
+
+async function prepareDatabase(input: WorkflowInput) {
+  if (input.mode === 'create') {
+    const databaseName = (slug(`${input.appName}-${input.appId}`) || `dibot-${Date.now()}`).slice(0, 60).replace(/-+$/g, '')
+    process.env.TURSO_DATABASE_NAME = databaseName
+    await run('bun', ['scripts/provision-turso.ts', 'create'], root, { TURSO_DATABASE_NAME: databaseName })
+    loadEnv({ path: join(root, '.env'), override: true })
+    process.env.DIBOT_APP_NAME = input.appName
+    console.log(`[turso] Base nueva preparada para ${input.appName}.`)
+  } else {
+    await run('bun', ['run', 'db:check'], root)
+    await run('bun', ['run', 'db:snapshot'], root)
+  }
+}
+
+function completeAppContract(input: WorkflowInput) {
+  return `
+CONTRATO OBLIGATORIO DEL WORKFLOW
+- El nombre exacto es "${input.appName}". Debe aparecer en la UI principal, en <title> y en /api/health como appName.
+- La persistencia no es opcional. La base Turso ya fue provisionada por el workflow: no ejecutes db:create. Define tablas reales en api/db/schema.ts, crea api/db/seed.ts idempotente y llena todas las tablas con datos iniciales útiles.
+- Crea api/index.ts usando startApiServer de api/server.ts. Expón /api/health con { ok: true, database: true, appName: "${input.appName}" } después de consultar Turso, además del CRUD real del flujo principal.
+- Crea api/smoke.ts: prueba crear, leer, actualizar y eliminar un registro temporal del dominio principal contra Turso, limpia el registro en finally y falla ante cualquier resultado incorrecto.
+- El frontend debe consumir rutas /api/* con TanStack Query. No guardes registros del dominio en localStorage o mocks; Zustand se limita a estado efímero de UI.
+- Ejecuta db:check, db:push, db:seed y dibot:verify. Corrige tus propios errores y repite hasta que todo pase. No te detengas después de diagnosticar un fallo.
+- En update no abras referencias visuales y no uses drizzle-kit push --force. Añade defaults o columnas nullable y conserva todas las filas existentes; el workflow compara un snapshot antes de aceptar la entrega.
+- dibot:verify exige TypeScript de frontend y servidor, Vite, bundle esbuild de API, metafile, health runtime conectado a Turso, seed no vacío y ESLint.
+- Trabaja solo en el repositorio actual. No clones, no uses Git, no publiques, no despliegues y no leas ni muestres el contenido de .env.
+`
+}
+
+async function runInitialAgent(input: WorkflowInput) {
+  if (input.mode === 'create') {
+    const superPrompt = await getSuperPrompt(input)
+    await run('opencode', [...openCodeBase(), '--agent', 'dibot-fast', `Construye la aplicación completa usando este superprompt:\n\n${superPrompt.content}\n${completeAppContract(input)}`], root)
+    return superPrompt.cached
+  }
+
+  await run('opencode', [...openCodeBase(), '--agent', 'dibot-fast', `UPDATE MODE. Aplica este cambio sin perder la dirección visual, los datos ni la API existentes. Inspecciona solo los archivos afectados y no vuelvas a abrir referencias Mobbin:\n\n${input.prompt}\n${completeAppContract(input)}`], root)
+  return false
+}
+
+async function verifyFunctionalApp(input: WorkflowInput) {
+  await runCapture('bun', ['run', 'db:check'], root)
+  await runCapture('bun', ['run', 'db:push'], root)
+  await runCapture('bun', ['run', 'db:seed'], root)
+  if (input.mode === 'update') await runCapture('bun', ['run', 'db:snapshot:verify'], root)
+  await runCapture('bun', ['run', 'test:functional'], root)
+  await runCapture('bun', ['run', 'dibot:verify'], root)
+}
+
+async function repairWithDibotFast(input: WorkflowInput, error: unknown, attempt: number) {
+  const output = error instanceof CommandError ? error.output : error instanceof Error ? error.message : String(error)
+  const diagnostic = redact(output).slice(-14_000)
+  const instruction = `REPAIR RUN ${attempt}. Tu propia entrega de ${input.appName} aún no pasa la puerta funcional.\n\nFallo exacto:\n${diagnostic}\n\nCorrige la causa raíz en el repositorio. Después ejecuta db:push, db:seed y bun run dibot:verify. Continúa corrigiendo dentro de esta ejecución hasta que todos pasen. No te limites a explicar o recomendar el siguiente paso.${completeAppContract(input)}`
+  await run('opencode', [...openCodeBase(), '--agent', 'dibot-fast', instruction], root)
+}
+
+async function main() {
+  const startedAt = Date.now()
+  let reporter: DibotReporter | undefined
+  try {
+    const input = parseInput(process.argv.slice(2))
+    const registeredApp = await findRegisteredApp(input)
+    if (input.mode === 'create') {
+      if (registeredApp) throw new Error(`La app ${input.appId} ya existe; create no reutiliza apps.`)
+      await registerApp(input)
+    } else {
+      if (!registeredApp) throw new Error(`La app ${input.appId} no existe; update no crea apps.`)
+      const owner = firstString(registeredApp, ['userId', 'user_id'])
+      if (owner && owner !== input.userId) throw new Error(`La app ${input.appId} no pertenece a ${input.userId}.`)
+    }
+
+    reporter = new DibotReporter(input)
+    await reporter.start()
+    await applyAppMetadata(input)
+    await reporter.update(`Preparando Turso para ${input.appName}`)
+    await prepareDatabase(input)
+    await run('opencode', ['--version'], root)
+
+    await reporter.update(`dibot-fast construyendo ${input.appName}`)
+    const openCodeStartedAt = Date.now()
+    const superPromptCached = await runInitialAgent(input)
+    let repairRuns = 0
+
+    while (true) {
+      try {
+        await reporter.update(`Verificando DB, API, esbuild y frontend (intento ${repairRuns + 1})`)
+        await verifyFunctionalApp(input)
+        break
+      } catch (verificationError) {
+        repairRuns += 1
+        await reporter.update(`dibot-fast corrigiendo su entrega (reparación ${repairRuns})`)
+        await repairWithDibotFast(input, verificationError, repairRuns)
+      }
+    }
+
+    const openCodeDurationMs = Date.now() - openCodeStartedAt
+    const durationMs = Date.now() - startedAt
+    const result = {
+      appId: input.appId,
+      appName: input.appName,
+      mode: input.mode,
+      databaseId: process.env.TURSO_DATABASE_ID,
+      databaseName: process.env.TURSO_DATABASE_NAME,
+      superPromptCached,
+      verificationPassed: true,
+      apiRuntimeVerified: true,
+      databaseSeedVerified: true,
+      repairRuns,
+      durationMs,
+      duration: formatDuration(durationMs),
+      openCodeDurationMs,
+      openCodeDuration: formatDuration(openCodeDurationMs),
+      workspace: root,
+      externalSteps: ['publicar en GitHub', 'desplegar en Dokploy'],
+    }
+    await reporter.complete(result)
+    console.log(`\nWorkflow (${input.mode}) terminó correctamente en ${formatDuration(durationMs)}. jobId=${reporter.id}`)
+    console.log(JSON.stringify(result, null, 2))
+  } catch (error) {
+    if (reporter) await reporter.fail(error)
+    console.error(`\nWorkflow falló: ${redact(error instanceof Error ? error.message : String(error))}`)
+    process.exitCode = 1
+  } finally {
+    console.log(`Tiempo total del workflow: ${formatDuration(Date.now() - startedAt)}`)
+  }
+}
+
+await main()

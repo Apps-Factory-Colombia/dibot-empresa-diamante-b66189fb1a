@@ -4,11 +4,11 @@ Esta carpeta es una plantilla vacia y reutilizable para generar productos movile
 
 ## Velocidad
 
-Usa `dibot-fast` como agente principal con una sola direccion visual, una arquitectura y un flujo principal. No escribas planes largos ni repitas inspecciones. Implementa pronto, delega la API a `api-builder` cuando haya persistencia y ejecuta `bun run build` al final.
+Usa `dibot-fast` como único agente principal para create, update y reparación. No tiene un límite fijo de pasos: implementa pronto y corrige sus propios errores hasta que `bun run dibot:verify` pase.
 
 ## Stack
 
-Conserva React, Vite, TypeScript, Bun, Tailwind, Base UI, Motion, Embla, Phosphor Icons, React Router, Zustand, TanStack Query, React Hook Form, Zod, Drizzle ORM, `@libsql/client` y Turso/libSQL. No agregues otra UI framework ni reemplaces la arquitectura.
+Conserva React, Vite, TypeScript, Bun, Tailwind, Base UI, Motion, Embla, lucide-react, React Router, Zustand, TanStack Query, React Hook Form, Zod, Drizzle ORM, `@libsql/client`, esbuild y Turso/libSQL. No agregues otra UI framework ni reemplaces la arquitectura.
 
 ## UI movil
 
@@ -18,17 +18,20 @@ Conserva React, Vite, TypeScript, Bun, Tailwind, Base UI, Motion, Embla, Phospho
 - Usa una sola direccion visual coherente. Las imagenes son referencia de composicion, no una licencia para copiar marca, logo o assets.
 - Cuando no haya imagenes adjuntas, `prompt-builder` usa una búsqueda estándar de Mobbin y entrega hasta seis referencias para `dibot-fast`. Extrae color, tipografía, escala, spacing, radios, sombras, navegación, cards, estados y movimiento; no clones pantallas ni uses assets de terceros.
 - Reutiliza componentes existentes cuando existan; la plantilla inicial es intencionalmente vacia.
+- `src/main.tsx` mantiene el `QueryClientProvider` global. Nunca uses `useQuery` o `useQueryClient` sin ese provider ni crees múltiples `QueryClient` por render.
+- `src/main.tsx` mantiene también `BrowserRouter` y `AppErrorBoundary`; no los elimines ni montes routers duplicados.
 - Las features importantes contemplan loading, empty, error, populated, submitting y success.
 
 ## API y Turso
 
 - Todo acceso a Turso ocurre en `api/` o en un backend server-side. Nunca expongas `TURSO_AUTH_TOKEN` ni `TURSO_PLATFORM_API_TOKEN` al navegador ni uses `VITE_` para secretos.
 - Usa Drizzle ORM + `@libsql/client` y define las tablas en `api/db/schema.ts`.
-- Para MVP usa `bun run db:push` despues de definir el schema. Usa generate/migrate solo cuando el producto necesite migraciones versionadas.
+- Toda app generada define schema, seed idempotente y API real. Usa `bun run db:push` y `bun run db:seed`; generate/migrate queda para migraciones versionadas.
 - Verifica `TURSO_DATABASE_ID` contra Turso antes de usar una base existente. La URL y el token de conexion son `TURSO_DATABASE_URL` y `TURSO_AUTH_TOKEN`.
 - Provisioning usa `TURSO_PLATFORM_API_TOKEN`, `TURSO_ORG_SLUG`, `TURSO_GROUP` y `TURSO_DATABASE_NAME`. `TURSO_DATABASE` es un JWT de conexion, no un token de Platform API.
 - El flujo de provisioning solo puede crear una base nueva con `bun run db:create`; nunca reutilices una base sin verificar su `TURSO_DATABASE_ID`.
-- Para cambios sobre una app existente usa el agente `dibot-update`; debe aplicar solo el cambio solicitado y conservar la dirección visual.
+- En update está prohibido `drizzle-kit push --force`. Usa defaults, columnas nullable o migraciones en dos fases; el workflow compara una instantánea para impedir pérdida de filas.
+- Para cambios sobre una app existente, el workflow ejecuta `dibot-fast` en UPDATE MODE y conserva la dirección visual y el `TURSO_DATABASE_ID`.
 
 ## Mobbin MCP
 
@@ -39,8 +42,8 @@ El servidor se llama `mobbin` y esta configurado en `opencode.json`. Su autentic
 1. Lee `package.json`, `src/`, `api/`, rutas, tokens y configuracion relevante.
 2. Define en una frase producto, usuario, tono, navegacion y direccion visual.
 3. Implementa un vertical slice funcional.
-4. Si hay persistencia, crea schema/API, ejecuta `bun run db:check` y luego `bun run db:push`.
-5. Corrige solo errores necesarios y ejecuta `bun run build` y `bun run lint`.
+4. Crea schema, seed y API; ejecuta `bun run db:check`, `bun run db:push`, `bun run db:seed` y `bun run db:verify`.
+5. Ejecuta `bun run dibot:verify`; corrige tus errores y repite hasta que frontend, API, Turso, esbuild y lint pasen.
 
 ## Archivos clave
 

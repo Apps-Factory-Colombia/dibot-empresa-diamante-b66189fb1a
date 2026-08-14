@@ -73,10 +73,10 @@ que construirá la aplicación.
 
 ## Cambios rápidos sobre una app existente
 
-Para una petición como “agrega favoritos”, “cambia el color del botón” o “añade un filtro”, usa el agente `dibot-update`:
+Para una petición como “agrega favoritos”, “cambia el color del botón” o “añade un filtro”, usa el workflow en modo `update`, que ejecuta `dibot-fast`:
 
 ```text
-opencode run --agent dibot-update "Agrega [cambio concreto] y conserva el diseño existente. Ejecuta build y lint al terminar."
+bun run dibot:workflow -- user-123 app-001 "Nombre App" update "Agrega [cambio concreto] y conserva el diseño existente."
 ```
 
 Este agente modifica solo lo necesario, mantiene la dirección visual y actualiza el schema/DB únicamente si el cambio lo requiere.

@@ -4,14 +4,23 @@ Construye la aplicación solicitada usando esta plantilla. Elige una sola direcc
 
 Reglas:
 - Piensa brevemente y actúa; no escribas un plan largo, alternativas ni brainstorming.
+- Eres responsable de frontend, API, base, seed y correcciones finales: reproduce cada fallo, corrígelo y repite la verificación hasta obtener verde.
 - Inspecciona la plantilla, package.json, src/, api/, tokens y configuración.
-- Antes de diseñar, abre y analiza todas las imágenes de `references/mobbin/` y lee su README. Deben influir en composición, jerarquía, navegación, tarjetas, densidad, color, tipografía, escala, spacing, radios, sombras, iconografía, estados y movimiento. Reproduce el lenguaje visual con una implementación original: no copies una pantalla pixel a pixel, logos, marcas, textos ni assets.
+- En CREATE MODE, abre y analiza las imágenes de `references/mobbin/` y su README. En UPDATE MODE no vuelvas a abrir referencias ni audites la app completa: inspecciona únicamente schema, API, componentes y estilos afectados.
 - Si el superprompt incluye `IMAGE PLAN`, usa imágenes reales públicas cuando aporten valor. Prefiere URLs directas y estables de Unsplash, Pexels o Wikimedia Commons; descarga una copia a `public/assets/` si es posible, agrega alt text, crédito/fuente y fallback visual local. Nunca uses assets de Mobbin ni imágenes de marcas sin permiso. Si no hay red, usa un placeholder local coherente.
-- Conserva React, Vite, TypeScript, Bun, Tailwind, Base UI, Motion, Embla, Phosphor Icons, React Router, Zustand, TanStack Query, React Hook Form, Zod, Drizzle, @libsql/client y Turso.
+- Conserva React, Vite, TypeScript, Bun, Tailwind, Base UI, Motion, Embla, lucide-react, React Router, Zustand, TanStack Query, React Hook Form, Zod, Drizzle, @libsql/client y Turso.
+- `src/main.tsx` ya monta un `QueryClientProvider` global. Nunca elimines ese provider ni uses `useQuery`/`useQueryClient` fuera de su árbol; si tocas el entrypoint, conserva la instancia única de `QueryClient`.
+- `src/main.tsx` también conserva `BrowserRouter` y `AppErrorBoundary`; no los elimines ni montes routers duplicados en pantallas.
+- Aplica React best practices: evita imports de barril pesados, usa imports estáticamente analizables y paraleliza operaciones independientes con `Promise.all`.
+- La app generada siempre tiene persistencia real. Define tablas en `api/db/schema.ts`, un seed idempotente en `api/db/seed.ts` y CRUD server-side en `api/index.ts` usando `startApiServer` de `api/server.ts`. Expón `/api/health` con `{ ok: true, database: true, appName }` después de consultar Turso.
+- Crea `api/smoke.ts` para ejecutar CRUD real temporal sobre el dominio principal y limpiar en `finally`; debe probar create/read/update/delete, no solo `select 1`.
+- El frontend consume `/api/*` con TanStack Query. No uses localStorage, mocks ni Zustand para almacenar registros del dominio; Zustand queda reservado a UI efímera.
+- Para API, workers, CLI o librerías internas usa las entradas convencionales `api/index.ts`, `workers/index.ts`, `cli/index.ts` o `internal/index.ts`; el build las bundlea con esbuild y genera `dist/esbuild-metafile.json`.
 - Implementa primero un vertical slice funcional para 390 px y después estados loading, empty, error, submitting y success.
 - Usa TanStack Query para remoto, Zustand para local y React Hook Form + Zod en formularios.
-- Si la app necesita persistencia, no simules la base de datos: ejecuta `bun run db:check`, luego `bun run db:create` para esta app, verifica `TURSO_DATABASE_ID`, ejecuta `bun run db:push` y comprueba que `.env` tenga URL, token de base, ID, organización, grupo y nombre. Nunca borres bases existentes.
-- Si falta `TURSO_PLATFORM_API_TOKEN`, detente antes de declarar la app funcional y reporta el bloqueo.
-- Al final ejecuta `bun run build` y `bun run lint`; corrige únicamente errores necesarios.
+- La entrega debe ser funcional, no solo compilable: conecta el flujo principal completo, monta rutas bajo el `BrowserRouter` global y conecta queries al backend real cuando exista persistencia. No dejes pantallas mock como resultado final.
+- La base nueva ya la provisiona el workflow con las credenciales server-side. No ejecutes `db:create` dentro del agente. Ejecuta `bun run db:check`, `bun run db:push`, `bun run db:seed` y `bun run db:verify`; en update conserva y verifica el mismo `TURSO_DATABASE_ID`.
+- Nunca uses `drizzle-kit push --force`. En update, toda columna nueva debe ser nullable o tener un default compatible; usa backfill o migración en dos fases para conservar cada fila. El seed usa insert-ignore/upsert no destructivo y nunca reemplaza datos del usuario.
+- Al final ejecuta `bun run test:functional` y `bun run dibot:verify` como puerta obligatoria. Si falla, corrige el error exacto y repite hasta que CRUD, contratos, TypeScript frontend/server, Vite, esbuild de API, health real, seed y lint pasen.
 
 Objetivo: una aplicación coherente, funcional y visualmente pulida en pocos pasos.

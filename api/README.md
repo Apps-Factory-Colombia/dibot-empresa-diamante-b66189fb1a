@@ -8,7 +8,8 @@ Las apps generadas usan esta capa server-side para persistencia. El navegador nu
 2. Ejecuta `bun run db:check` para verificar organización, grupo y `TURSO_DATABASE_ID`.
 3. Si la app necesita una base nueva, ejecuta `bun run db:create`. Este comando crea una única base nueva, genera su token de conexión y actualiza `.env` y `.env.turso`.
 4. Ejecuta `bun run db:push` para sincronizar el schema con Turso.
-5. Expón handlers tipados desde `api/` y consúmelos desde React con TanStack Query.
+5. Ejecuta `bun run db:verify` para comprobar la conexión real y que la app no dependa de una base inexistente.
+6. Expón handlers tipados desde `api/` y consúmelos desde React con TanStack Query.
 
 ## Variables
 

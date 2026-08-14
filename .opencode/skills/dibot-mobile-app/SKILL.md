@@ -13,14 +13,20 @@ Elige una única dirección visual y empieza a implementar. No hagas planes larg
 
 ## Contrato
 
-- Conserva React, Vite, TypeScript, Tailwind, Base UI, Motion, Embla, Phosphor, React Router, Zustand, TanStack Query, React Hook Form, Zod y Capacitor.
+- Conserva React, Vite, TypeScript, Tailwind, Base UI, Motion, Embla, lucide-react, React Router, Zustand, TanStack Query, React Hook Form, Zod, esbuild y Capacitor.
 - Inspecciona solo `package.json`, `src/`, rutas, tokens, datos/servicios, stores y configuración nativa relevante.
 - Diseña para 390 px, con safe areas y controles de 44–56 px.
 - Usa Query para remoto, Zustand para local, RHF + Zod para formularios y Base UI para overlays accesibles.
 - Reutiliza componentes y tokens; crea otros solo si el patrón es realmente nuevo.
 - Mantén loading, empty, error, success y submitting donde apliquen.
-- Ejecuta `bun run build` al finalizar y corrige solo los errores necesarios.
+- `src/main.tsx` ya monta un `QueryClientProvider` global. Consérvalo y no uses `useQuery`/`useQueryClient` fuera de ese árbol.
+- `src/main.tsx` también monta `BrowserRouter` y `AppErrorBoundary`; consérvalos para que `useRoutes` tenga contexto y los errores no dejen una pantalla en blanco.
+- Aplica las reglas de React best practices: evita imports de barril, usa rutas estáticamente analizables y paraleliza trabajo independiente.
+- Implementa persistencia real en Turso, `api/index.ts`, schema Drizzle, seed idempotente y TanStack Query conectado a `/api/*`; no uses almacenamiento local como base del dominio.
+- Añade `api/smoke.ts` con CRUD temporal y limpieza garantizada para verificar el flujo de datos real.
+- En update no uses `push --force`: añade defaults o columnas nullable y conserva todas las filas protegidas por el snapshot del workflow.
+- Ejecuta `bun run db:push`, `bun run db:seed` y `bun run dibot:verify` al finalizar. Corrige tus propios errores y repite hasta que DB, API, esbuild, runtime y lint estén en verde.
 
-## Delegación
+## Ejecución principal
 
-Si hay features independientes, delega hasta tres a `feature-builder`. Usa `fixer` solo para errores de integración o build. Evita que dos agentes editen los mismos archivos.
+`dibot-fast` conserva la responsabilidad del vertical slice completo y de su reparación final. Puede delegar features aisladas, pero debe integrar y verificar personalmente el resultado.
