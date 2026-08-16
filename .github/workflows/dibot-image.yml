@@ -81,13 +81,18 @@ jobs:
             ${{ env.IMAGE_TAG }}
             ${{ env.STABLE_TAG }}
 
-      - name: Make GHCR package public when permitted
+      - name: Make GHCR package public when configured
+        if: ${{ secrets.GHCR_VISIBILITY_TOKEN != '' }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GHCR_VISIBILITY_TOKEN }}
         run: |
           gh api --method PATCH \
             "/orgs/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}" \
             -f visibility=public || echo "GHCR package visibility was not changed; configure Dokploy registry credentials for a private package."
+
+      - name: Explain private GHCR fallback
+        if: ${{ secrets.GHCR_VISIBILITY_TOKEN == '' }}
+        run: echo "GHCR package remains private; Dokploy must use DOKPLOY_DOCKER_USERNAME and DOKPLOY_DOCKER_PASSWORD."
 
       - name: Publish release summary
         run: |
