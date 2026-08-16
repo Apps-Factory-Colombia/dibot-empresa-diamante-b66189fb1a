@@ -81,6 +81,14 @@ jobs:
             ${{ env.IMAGE_TAG }}
             ${{ env.STABLE_TAG }}
 
+      - name: Make GHCR package public when permitted
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method PATCH \
+            "/orgs/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}" \
+            -f visibility=public || echo "GHCR package visibility was not changed; configure Dokploy registry credentials for a private package."
+
       - name: Publish release summary
         run: |
           echo "image=${IMAGE_TAG}" >> "$GITHUB_STEP_SUMMARY"
