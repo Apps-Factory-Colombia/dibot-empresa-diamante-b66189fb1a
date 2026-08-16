@@ -7,9 +7,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
-  IMAGE_TAG: ghcr.io/${{ github.repository }}:${{ github.sha }}
-  STABLE_TAG: ghcr.io/${{ github.repository }}:${{ github.event.repository.name }}
+  IMAGE_NAME: ghcr.io/apps-factory-colombia/${{ github.event.repository.name }}
+  IMAGE_TAG: ghcr.io/apps-factory-colombia/${{ github.event.repository.name }}:${{ github.sha }}
+  STABLE_TAG: ghcr.io/apps-factory-colombia/${{ github.event.repository.name }}:${{ github.event.repository.name }}
 
 jobs:
   release:
