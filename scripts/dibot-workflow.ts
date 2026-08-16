@@ -1,6 +1,5 @@
 import { config as loadEnv } from 'dotenv'
 import { spawn } from 'node:child_process'
-import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -11,7 +10,6 @@ type Mode = 'create' | 'update'
 type WorkflowInput = { userId: string; appId: string; appName: string; mode: Mode; prompt: string }
 
 const root = process.cwd()
-const superPromptCacheDir = join(root, '.dibot-runtime', 'superprompts')
 
 class CommandError extends Error {
   readonly output: string
@@ -120,30 +118,6 @@ async function runCapture(command: string, args: string[], cwd: string, extraEnv
   })
 }
 
-async function getSuperPrompt(input: WorkflowInput) {
-  const prompt = `Nombre obligatorio de la aplicación: ${input.appName}\n\n${input.prompt}`
-  const cacheKey = createHash('sha256').update(`superprompt-v3\n${prompt}`).digest('hex').slice(0, 24)
-  const cachePath = join(superPromptCacheDir, `${cacheKey}.txt`)
-  try {
-    const cached = await readFile(cachePath, 'utf8')
-    if (cached.trim()) {
-      console.log(`\n[cache] Superprompt reutilizado: ${cacheKey}`)
-      return { content: cached, cached: true }
-    }
-  } catch {
-    // Cache miss.
-  }
-
-  const rawOutput = await runCapture('opencode', [...openCodeBase(), '--agent', 'prompt-builder', prompt], root)
-  const blocks = [...rawOutput.matchAll(/```text\s*([\s\S]*?)```/g)]
-  const content = blocks.at(-1)?.[1].trim() ?? rawOutput.trim()
-  if (content.trim()) {
-    await mkdir(superPromptCacheDir, { recursive: true })
-    await writeFile(cachePath, content, 'utf8')
-  }
-  return { content, cached: false }
-}
-
 class JsonApi {
   private readonly baseUrl: string
   private readonly headers: Record<string, string>
@@ -244,7 +218,9 @@ async function registerApp(input: WorkflowInput) {
 }
 
 function openCodeBase() {
-  const base = ['run']
+  const model = process.env.DIBOT_OPENCODE_MODEL?.trim() || 'openai/gpt-5.6-luna'
+  const variant = process.env.DIBOT_OPENCODE_VARIANT?.trim() || 'medium'
+  const base = ['run', '--model', model, '--variant', variant]
   const attach = process.env.OPENCODE_ATTACH_URL?.trim()
   if (attach) base.push('--attach', attach)
   return base
@@ -280,16 +256,29 @@ async function prepareDatabase(input: WorkflowInput) {
 function completeAppContract(input: WorkflowInput) {
   return `
 CONTRATO OBLIGATORIO DEL WORKFLOW
+- Esta es una sesión única de dibot-fast. Entiende el prompt natural, crea internamente un brief funcional/visual compacto y programa de inmediato; no llames a prompt-builder ni repitas el brief como una segunda sesión.
+- En CREATE MODE ejecuta exactamente una búsqueda visual de Mobbin con mobbin_search_screens, selecciona hasta seis referencias relevantes, analiza su lenguaje visual una sola vez y guarda referencias/README en references/mobbin cuando sea posible. No copies pantallas, marcas ni assets.
+- El producto final debe ser distinto para este pedido: decide una dirección visual original basada en Mobbin, no entregues un dashboard genérico ni una pantalla vacía.
 - El nombre exacto es "${input.appName}". Debe aparecer en la UI principal, en <title> y en /api/health como appName.
 - La persistencia no es opcional. La base Turso ya fue provisionada por el workflow: no ejecutes db:create. Define tablas reales en api/db/schema.ts, crea api/db/seed.ts idempotente y llena todas las tablas con datos iniciales útiles.
 - Crea api/index.ts usando startApiServer de api/server.ts. Expón /api/health con { ok: true, database: true, appName: "${input.appName}" } después de consultar Turso, además del CRUD real del flujo principal.
 - Crea api/smoke.ts: prueba crear, leer, actualizar y eliminar un registro temporal del dominio principal contra Turso, limpia el registro en finally y falla ante cualquier resultado incorrecto.
 - El frontend debe consumir rutas /api/* con TanStack Query. No guardes registros del dominio en localStorage o mocks; Zustand se limita a estado efímero de UI.
-- Ejecuta db:check, db:push, db:seed y dibot:verify. Corrige tus propios errores y repite hasta que todo pase. No te detengas después de diagnosticar un fallo.
+- Ejecuta db:check cuando corresponda, db:push y db:seed. Para el cierre usa dibot:verify:fast; corrige únicamente el error exacto y no repitas una auditoría completa del repositorio.
 - En update no abras referencias visuales y no uses drizzle-kit push --force. Añade defaults o columnas nullable y conserva todas las filas existentes; el workflow compara un snapshot antes de aceptar la entrega.
-- dibot:verify exige TypeScript de frontend y servidor, Vite, bundle esbuild de API, metafile, health runtime conectado a Turso, seed no vacío y ESLint.
+- dibot:verify:fast exige TypeScript de frontend y servidor, Vite, bundle esbuild de API, metafile, health runtime conectado a Turso, seed no vacío y ESLint.
 - Trabaja solo en el repositorio actual. No clones, no uses Git, no publiques, no despliegues y no leas ni muestres el contenido de .env.
 `
+}
+
+async function getSuperPrompt(input: WorkflowInput) {
+  // Compatibility shape for the result payload. There is intentionally no
+  // second OpenCode/prompt-builder session: dibot-fast receives the natural
+  // request and performs the visual brief internally.
+  return {
+    content: `Nombre obligatorio de la aplicación: ${input.appName}\n\nPedido natural del usuario:\n${input.prompt}`,
+    cached: false,
+  }
 }
 
 async function runInitialAgent(input: WorkflowInput) {
@@ -304,18 +293,22 @@ async function runInitialAgent(input: WorkflowInput) {
 }
 
 async function verifyFunctionalApp(input: WorkflowInput) {
-  await runCapture('bun', ['run', 'db:check'], root)
+  await runCapture('bun', ['run', 'verify:contracts'], root)
+  await runCapture('bun', ['run', 'verify:generated'], root)
   await runCapture('bun', ['run', 'db:push'], root)
   await runCapture('bun', ['run', 'db:seed'], root)
   if (input.mode === 'update') await runCapture('bun', ['run', 'db:snapshot:verify'], root)
+  await runCapture('bun', ['run', 'build'], root)
+  await runCapture('bun', ['run', 'verify:api'], root)
   await runCapture('bun', ['run', 'test:functional'], root)
-  await runCapture('bun', ['run', 'dibot:verify'], root)
+  await runCapture('bun', ['run', 'db:verify'], root)
+  await runCapture('bun', ['run', 'lint'], root)
 }
 
 async function repairWithDibotFast(input: WorkflowInput, error: unknown, attempt: number) {
   const output = error instanceof CommandError ? error.output : error instanceof Error ? error.message : String(error)
   const diagnostic = redact(output).slice(-14_000)
-  const instruction = `REPAIR RUN ${attempt}. Tu propia entrega de ${input.appName} aún no pasa la puerta funcional.\n\nFallo exacto:\n${diagnostic}\n\nCorrige la causa raíz en el repositorio. Después ejecuta db:push, db:seed y bun run dibot:verify. Continúa corrigiendo dentro de esta ejecución hasta que todos pasen. No te limites a explicar o recomendar el siguiente paso.${completeAppContract(input)}`
+  const instruction = `REPAIR RUN ${attempt}. Tu propia entrega de ${input.appName} aún no pasa la puerta funcional.\n\nFallo exacto:\n${diagnostic}\n\nCorrige únicamente la causa raíz en el archivo afectado. Después ejecuta solo el check relacionado y bun run dibot:verify:fast. No vuelvas a buscar Mobbin, no explores el repositorio completo y no te limites a explicar o recomendar el siguiente paso.${completeAppContract(input)}`
   await run('opencode', [...openCodeBase(), '--agent', 'dibot-fast', instruction], root)
 }
 
@@ -345,6 +338,7 @@ async function main() {
     const openCodeStartedAt = Date.now()
     const superPromptCached = await runInitialAgent(input)
     let repairRuns = 0
+    const maxRepairRuns = Math.max(0, Math.min(2, Number(process.env.DIBOT_MAX_REPAIR_RUNS ?? 1)))
 
     while (true) {
       try {
@@ -352,6 +346,9 @@ async function main() {
         await verifyFunctionalApp(input)
         break
       } catch (verificationError) {
+        if (repairRuns >= maxRepairRuns) {
+          throw new Error(`La validación falló y se alcanzó el máximo de reparaciones (${maxRepairRuns}). ${redact(verificationError instanceof Error ? verificationError.message : String(verificationError))}`, { cause: verificationError })
+        }
         repairRuns += 1
         await reporter.update(`dibot-fast corrigiendo su entrega (reparación ${repairRuns})`)
         await repairWithDibotFast(input, verificationError, repairRuns)
@@ -367,6 +364,7 @@ async function main() {
       databaseId: process.env.TURSO_DATABASE_ID,
       databaseName: process.env.TURSO_DATABASE_NAME,
       superPromptCached,
+      planningMode: 'single dibot-fast session',
       verificationPassed: true,
       apiRuntimeVerified: true,
       databaseSeedVerified: true,

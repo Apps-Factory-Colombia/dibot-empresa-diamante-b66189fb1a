@@ -4,9 +4,12 @@ Construye la aplicación solicitada usando esta plantilla. Elige una sola direcc
 
 Reglas:
 - Piensa brevemente y actúa; no escribas un plan largo, alternativas ni brainstorming.
+- En CREATE MODE esta es la única sesión de planificación e implementación: entiende el prompt natural, crea un brief interno compacto y no llames a prompt-builder ni repitas el contexto en otra sesión.
+- En CREATE MODE ejecuta exactamente una búsqueda con `mobbin_search_screens` usando una consulta específica del producto, selecciona hasta seis referencias, analiza el lenguaje visual una sola vez y guarda `references/mobbin/README.md` y las imágenes cuando el entorno lo permita. Si Mobbin no responde, continúa con una dirección visual original y registra el fallo sin iniciar otra sesión.
+- Cada app debe ser visualmente distinta y funcional para su solicitud. No entregues la App null, un dashboard genérico ni mocks como resultado final.
 - Eres responsable de frontend, API, base, seed y correcciones finales: reproduce cada fallo, corrígelo y repite la verificación hasta obtener verde.
-- Inspecciona la plantilla, package.json, src/, api/, tokens y configuración.
-- En CREATE MODE, abre y analiza las imágenes de `references/mobbin/` y su README. En UPDATE MODE no vuelvas a abrir referencias ni audites la app completa: inspecciona únicamente schema, API, componentes y estilos afectados.
+- Inspecciona solo la plantilla y los archivos base del workspace; no hagas glob global ni leas rutas padre, `.env`, `.env.turso` o repositorios externos.
+- En CREATE MODE, analiza únicamente las referencias que produjo la búsqueda actual y su README. Si Mobbin no produjo imágenes, no inicies una segunda búsqueda. En UPDATE MODE no vuelvas a abrir referencias ni audites la app completa: inspecciona únicamente schema, API, componentes y estilos afectados.
 - Si el superprompt incluye `IMAGE PLAN`, usa imágenes reales públicas cuando aporten valor. Prefiere URLs directas y estables de Unsplash, Pexels o Wikimedia Commons; descarga una copia a `public/assets/` si es posible, agrega alt text, crédito/fuente y fallback visual local. Nunca uses assets de Mobbin ni imágenes de marcas sin permiso. Si no hay red, usa un placeholder local coherente.
 - Conserva React, Vite, TypeScript, Bun, Tailwind, Base UI, Motion, Embla, lucide-react, React Router, Zustand, TanStack Query, React Hook Form, Zod, Drizzle, @libsql/client y Turso.
 - `src/main.tsx` ya monta un `QueryClientProvider` global. Nunca elimines ese provider ni uses `useQuery`/`useQueryClient` fuera de su árbol; si tocas el entrypoint, conserva la instancia única de `QueryClient`.
@@ -21,6 +24,6 @@ Reglas:
 - La entrega debe ser funcional, no solo compilable: conecta el flujo principal completo, monta rutas bajo el `BrowserRouter` global y conecta queries al backend real cuando exista persistencia. No dejes pantallas mock como resultado final.
 - La base nueva ya la provisiona el workflow con las credenciales server-side. No ejecutes `db:create` dentro del agente. Ejecuta `bun run db:check`, `bun run db:push`, `bun run db:seed` y `bun run db:verify`; en update conserva y verifica el mismo `TURSO_DATABASE_ID`.
 - Nunca uses `drizzle-kit push --force`. En update, toda columna nueva debe ser nullable o tener un default compatible; usa backfill o migración en dos fases para conservar cada fila. El seed usa insert-ignore/upsert no destructivo y nunca reemplaza datos del usuario.
-- Al final ejecuta `bun run test:functional` y `bun run dibot:verify` como puerta obligatoria. Si falla, corrige el error exacto y repite hasta que CRUD, contratos, TypeScript frontend/server, Vite, esbuild de API, health real, seed y lint pasen.
+- Al final ejecuta el check rápido disponible y corrige únicamente el error exacto. No repitas Mobbin ni vuelvas a leer el repositorio completo durante una reparación.
 
 Objetivo: una aplicación coherente, funcional y visualmente pulida en pocos pasos.

@@ -31,5 +31,6 @@ if (!main.includes('AppErrorBoundary')) throw new Error('Contrato roto: el entry
 if (queryClientCount !== 1) throw new Error(`Contrato roto: se esperaba un único QueryClient global y se encontraron ${queryClientCount}.`)
 if (dependencies['@phosphor-icons/react']) throw new Error('Contrato roto: elimina @phosphor-icons/react; usa lucide-react.')
 if (!dependencies['lucide-react']) throw new Error('Contrato roto: falta la dependencia lucide-react.')
+if (!dependencies['@hookform/resolvers']) throw new Error('Contrato roto: falta @hookform/resolvers para formularios React Hook Form + Zod.')
 
 console.log('[contracts] QueryClientProvider, QueryClient único y lucide-react verificados.')

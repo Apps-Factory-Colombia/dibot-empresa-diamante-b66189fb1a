@@ -77,6 +77,10 @@ export function startApiServer(handler: ApiHandler) {
   const server = createServer(async (nodeRequest, nodeResponse) => {
     try {
       const pathname = new URL(nodeRequest.url ?? '/', `http://${nodeRequest.headers.host ?? `${host}:${port}`}`).pathname
+      if (pathname === '/healthz') {
+        await sendWebResponse(nodeResponse, json({ ok: true, ready: true }))
+        return
+      }
       if (pathname.startsWith('/api/')) {
         await sendWebResponse(nodeResponse, await handler(await toRequest(nodeRequest, port)))
       } else {

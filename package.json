@@ -30,11 +30,13 @@
     "verify:generated": "bun scripts/verify-generated-app.ts",
     "verify:api": "bun scripts/verify-api.ts",
     "ensure:deps": "bun scripts/ensure-dependencies.ts",
+    "dibot:verify:fast": "bun run verify:contracts && bun run verify:generated && bun run db:verify && bun run build && bun run verify:api && bun run lint",
     "dibot:verify": "bun run ensure:deps && bun run verify:contracts && bun run verify:generated && bun run db:verify && bun run build && bun run verify:api && bun run lint",
     "dibot:workflow": "bun run ensure:deps && bun scripts/dibot-workflow.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
+    "@hookform/resolvers": "^5.9.0",
     "@libsql/client": "^0.17.4",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.101.4",

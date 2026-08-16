@@ -1,6 +1,6 @@
 # Dibot Mobile Template
 
-Plantilla vacia para generar aplicaciones mobile-first. OpenCode recibe el brief, las referencias visuales y crea el producto desde `src/App.tsx`.
+Plantilla base de infraestructura para generar aplicaciones mobile-first. OpenCode crea el producto específico desde `src/App.tsx`; la plantilla ya incluye API, seed, smoke CRUD, health check liviano y contratos para evitar reparaciones estructurales.
 
 ## Desarrollo
 
@@ -25,17 +25,17 @@ La capa server-side esta en `api/`. Configura Turso, define tablas en `api/db/sc
 
 ## OpenCode
 
-Usa `prompt-builder` para convertir la idea en un superprompt y `dibot-fast` como agente principal tanto para crear como para actualizar y reparar la app.
+Usa una sola sesión de `dibot-fast` con `gpt-5.6-luna` en `medium`: entiende el prompt natural, busca y analiza Mobbin una vez en `create`, decide una dirección visual original y construye la app. `prompt-builder` se conserva solo como compatibilidad conceptual y ya no abre una segunda sesión.
 
 ## Workflow automatizado
 
-El workflow recibe el nombre, registra el job, provisiona una base Turso nueva en `create`, ejecuta `dibot-fast` y exige schema, seed, API, frontend conectado, TypeScript, Vite, esbuild, health runtime y lint. Si algo falla vuelve a llamar a `dibot-fast` con el diagnóstico exacto hasta que la puerta completa pase.
+El workflow recibe el nombre, registra el job, provisiona una base Turso nueva en `create`, ejecuta `dibot-fast` y exige schema, seed, API, frontend conectado, TypeScript, Vite, esbuild, health runtime y lint. Si algo falla hace como máximo una reparación dirigida por defecto; no repite Mobbin ni audita todo el repositorio.
 
 ```powershell
 $env:DIBOT_API_URL='https://api-dibot.appsfactory.com.co'
 $env:DIBOT_AGENT_API_TOKEN='...'
 
-# App nueva: nombre, registro, Turso, prompt-builder y dibot-fast
+# App nueva: nombre, registro, Turso y una sesión dibot-fast
 bun run dibot:workflow -- user-123 app-001 "Pulso" create "Crea una app movil de notas rapidas"
 
 # App existente: dibot-fast en UPDATE MODE sobre la misma API y base
@@ -44,4 +44,4 @@ bun run dibot:workflow -- user-123 app-001 "Pulso" update "Agrega busqueda y con
 
 Tambien acepta flags: `--user-id`, `--app-id`, `--app-name`, `--mode` y `--prompt`. El resultado final incluye tiempos, nombre y base verificada.
 El workflow tambien muestra el tiempo total, el tiempo de OpenCode y el tiempo de validacion; esas duraciones quedan incluidas en el JSON final como `duration`, `openCodeDuration` y `verificationDuration`.
-En `create`, el workflow reutiliza el superprompt por hash desde `.dibot-runtime/superprompts/`; cambia automáticamente cuando cambia el brief.
+En `create`, el workspace puede reutilizar las dependencias calientes de la plantilla cuando el `bun.lock` coincide; así se evita reinstalar los paquetes en cada app.
