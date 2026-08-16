@@ -1,0 +1,87 @@
+name: Dibot Build and Publish Image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_TAG: ghcr.io/${{ github.repository }}:${{ github.sha }}
+  STABLE_TAG: ghcr.io/${{ github.repository }}:${{ github.event.repository.name }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      DIBOT_REQUIRE_PERSISTENCE: ${{ secrets.TURSO_DATABASE_URL != '' && '1' || '0' }}
+      DIBOT_REQUIRE_SEED: ${{ secrets.TURSO_DATABASE_URL != '' && '1' || '0' }}
+      DIBOT_APP_NAME: ${{ secrets.DIBOT_APP_NAME }}
+      TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+      TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+      TURSO_DATABASE_ID: ${{ secrets.TURSO_DATABASE_ID }}
+      TURSO_DATABASE_NAME: ${{ secrets.TURSO_DATABASE_NAME }}
+      TURSO_ORG_SLUG: ${{ secrets.TURSO_ORG_SLUG }}
+      TURSO_GROUP: ${{ secrets.TURSO_GROUP }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.2
+
+      - name: Cache Bun downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Validate contracts and generated app
+        run: bun run verify:contracts && bun run verify:generated
+
+      - name: Provision schema, seed and verify Turso
+        if: env.DIBOT_REQUIRE_PERSISTENCE == '1'
+        run: bun run db:push && bun run db:seed && bun run db:verify
+
+      - name: Build once
+        run: bun run build
+
+      - name: Verify compiled API and smoke test
+        if: env.DIBOT_REQUIRE_PERSISTENCE == '1'
+        run: bun run verify:api && bun run test:functional
+
+      - name: Lint release
+        run: bun run lint
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_TAG }}
+            ${{ env.STABLE_TAG }}
+
+      - name: Publish release summary
+        run: |
+          echo "image=${IMAGE_TAG}" >> "$GITHUB_STEP_SUMMARY"
+          echo "stable=${STABLE_TAG}" >> "$GITHUB_STEP_SUMMARY"

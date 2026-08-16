@@ -27,7 +27,7 @@ if (!/sqliteTable\s*\(/.test(schema)) throw new Error('App incompleta: api/db/sc
 if (!api.includes('/api/health') || !api.includes('startApiServer')) throw new Error('App incompleta: api/index.ts debe usar startApiServer y exponer /api/health.')
 if (!seed.trim()) throw new Error('App incompleta: api/db/seed.ts está vacío.')
 if (!smoke.trim()) throw new Error('App incompleta: api/smoke.ts está vacío.')
-if (!app.includes('/api/')) throw new Error('App incompleta: el frontend no consume la API server-side mediante /api/.')
+if (!app.includes('/api/')) throw new Error('App incompleta: src/App.tsx debe consumir la API server-side mediante /api/.')
 
 const appName = process.env.DIBOT_APP_NAME?.trim()
 if (appName && (!index.includes(`<title>${appName}</title>`) || !app.includes(appName))) {

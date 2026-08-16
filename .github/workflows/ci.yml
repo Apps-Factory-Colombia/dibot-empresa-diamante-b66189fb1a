@@ -1,11 +1,10 @@
 name: CI
 
 on:
-  push:
   pull_request:
 
 jobs:
-  verify:
+  fast-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,5 +19,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - run: bun run dibot:verify
-      - run: bun run analyze
+      - name: Fast contract and TypeScript checks
+        run: bun run dibot:verify:fast

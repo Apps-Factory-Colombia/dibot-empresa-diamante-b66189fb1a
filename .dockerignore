@@ -1,0 +1,12 @@
+.git
+.github
+.dibot-runtime
+.dibot-workspaces
+.env
+.env.*
+!.env.example
+node_modules
+dist
+references/mobbin
+README-INSTALL.md
+MOBBIN-OPENCODE.md

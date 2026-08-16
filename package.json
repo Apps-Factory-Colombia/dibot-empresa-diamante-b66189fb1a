@@ -29,9 +29,13 @@
     "verify:contracts": "bun scripts/verify-runtime-contracts.ts",
     "verify:generated": "bun scripts/verify-generated-app.ts",
     "verify:api": "bun scripts/verify-api.ts",
+    "typecheck:app": "bun node_modules/typescript/bin/tsc --noEmit -p tsconfig.app.json",
+    "typecheck:node": "bun node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
+    "typecheck:server": "bun node_modules/typescript/bin/tsc --noEmit -p tsconfig.server.json",
     "ensure:deps": "bun scripts/ensure-dependencies.ts",
-    "dibot:verify:fast": "bun run verify:contracts && bun run verify:generated && bun run db:verify && bun run build && bun run verify:api && bun run lint",
-    "dibot:verify": "bun run ensure:deps && bun run verify:contracts && bun run verify:generated && bun run db:verify && bun run build && bun run verify:api && bun run lint",
+    "dibot:verify:fast": "bun run verify:contracts && bun run verify:generated && bun run typecheck:app && bun run typecheck:node && bun run typecheck:server && bun run lint",
+    "dibot:verify:release": "bun run verify:contracts && bun run verify:generated && bun run db:push && bun run db:seed && bun run db:verify && bun run build && bun run verify:api && bun run test:functional && bun run lint",
+    "dibot:verify": "bun run ensure:deps && bun run dibot:verify:release",
     "dibot:workflow": "bun run ensure:deps && bun scripts/dibot-workflow.ts"
   },
   "dependencies": {

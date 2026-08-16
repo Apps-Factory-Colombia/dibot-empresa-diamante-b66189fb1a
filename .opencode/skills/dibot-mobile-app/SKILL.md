@@ -25,7 +25,7 @@ Elige una única dirección visual y empieza a implementar. No hagas planes larg
 - Implementa persistencia real en Turso, `api/index.ts`, schema Drizzle, seed idempotente y TanStack Query conectado a `/api/*`; no uses almacenamiento local como base del dominio.
 - Añade `api/smoke.ts` con CRUD temporal y limpieza garantizada para verificar el flujo de datos real.
 - En update no uses `push --force`: añade defaults o columnas nullable y conserva todas las filas protegidas por el snapshot del workflow.
-- Ejecuta `bun run db:push`, `bun run db:seed` y `bun run dibot:verify` al finalizar. Corrige tus propios errores y repite hasta que DB, API, esbuild, runtime y lint estén en verde.
+- Detente después de implementar; el workflow externo ejecuta una sola vez `bun run dibot:verify:fast` y después ordena `db:push → db:seed → db:verify → build → verify:api → smoke → lint`. No ejecutes el build de producción desde OpenCode.
 
 ## Ejecución principal
 

@@ -17,7 +17,7 @@ bun run dibot:verify
 bun run analyze
 ```
 
-El build ejecuta TypeScript y Vite en paralelo y usa esbuild para entradas opcionales de `api/index.ts`, `workers/index.ts`, `cli/index.ts` e `internal/index.ts`. Cada bundle server-side genera datos en `dist/esbuild-metafile.json` para analizar dependencias. Si la app declara tablas o API, `dibot:verify` también prueba la conexión real con Turso.
+El build ejecuta TypeScript y Vite en paralelo y usa esbuild para entradas opcionales de `api/index.ts`, `workers/index.ts`, `cli/index.ts` e `internal/index.ts`. Cada bundle server-side genera datos en `dist/esbuild-metafile.json`. `dibot:verify:fast` solo hace contratos, TypeScript y lint; `dibot:verify:release` es la puerta completa y ejecuta el único build de producción.
 
 ## Base de datos
 
@@ -29,7 +29,7 @@ Usa una sola sesión de `dibot-fast` con `gpt-5.6-luna` en `medium`: entiende el
 
 ## Workflow automatizado
 
-El workflow recibe el nombre, registra el job, provisiona una base Turso nueva en `create`, ejecuta `dibot-fast` y exige schema, seed, API, frontend conectado, TypeScript, Vite, esbuild, health runtime y lint. Si algo falla hace como máximo una reparación dirigida por defecto; no repite Mobbin ni audita todo el repositorio.
+El workflow recibe el nombre, registra el job, provisiona una base Turso nueva en `create`, ejecuta `dibot-fast` y exige schema, seed, API, frontend conectado, TypeScript y lint sin compilar producción en el PC. Después publica GitHub; GitHub Actions ejecuta `dibot:verify:release`, crea una imagen Docker runtime y la publica en GHCR. Dokploy recibe esa imagen, hace pull y arranca el contenedor sin clonar ni volver a compilar.
 
 ```powershell
 $env:DIBOT_API_URL='https://api-dibot.appsfactory.com.co'

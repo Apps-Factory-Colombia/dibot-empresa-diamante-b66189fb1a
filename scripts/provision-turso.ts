@@ -55,7 +55,7 @@ async function check() {
 }
 
 async function writeRuntimeEnv(values: Record<string, string>) {
-  let current = ''
+  let current: string = ''
   try { current = await readFile('.env', 'utf8') } catch { /* .env can be created on first provisioning */ }
   const lines = current.split(/\r?\n/)
   for (const [key, value] of Object.entries(values)) {

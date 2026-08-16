@@ -258,15 +258,16 @@ function completeAppContract(input: WorkflowInput) {
 CONTRATO OBLIGATORIO DEL WORKFLOW
 - Esta es una sesión única de dibot-fast. Entiende el prompt natural, crea internamente un brief funcional/visual compacto y programa de inmediato; no llames a prompt-builder ni repitas el brief como una segunda sesión.
 - En CREATE MODE ejecuta exactamente una búsqueda visual de Mobbin con mobbin_search_screens, selecciona hasta seis referencias relevantes, analiza su lenguaje visual una sola vez y guarda referencias/README en references/mobbin cuando sea posible. No copies pantallas, marcas ni assets.
+- En UPDATE MODE lee siempre references/mobbin/README.md y las referencias visuales antes de modificar la interfaz. Mantén el lenguaje visual existente. Si agregas pantallas o cambias la dirección visual, ejecuta una búsqueda Mobbin complementaria una sola vez; si el cambio es solo de datos/API, no hagas una búsqueda nueva.
 - El producto final debe ser distinto para este pedido: decide una dirección visual original basada en Mobbin, no entregues un dashboard genérico ni una pantalla vacía.
 - El nombre exacto es "${input.appName}". Debe aparecer en la UI principal, en <title> y en /api/health como appName.
 - La persistencia no es opcional. La base Turso ya fue provisionada por el workflow: no ejecutes db:create. Define tablas reales en api/db/schema.ts, crea api/db/seed.ts idempotente y llena todas las tablas con datos iniciales útiles.
 - Crea api/index.ts usando startApiServer de api/server.ts. Expón /api/health con { ok: true, database: true, appName: "${input.appName}" } después de consultar Turso, además del CRUD real del flujo principal.
 - Crea api/smoke.ts: prueba crear, leer, actualizar y eliminar un registro temporal del dominio principal contra Turso, limpia el registro en finally y falla ante cualquier resultado incorrecto.
 - El frontend debe consumir rutas /api/* con TanStack Query. No guardes registros del dominio en localStorage o mocks; Zustand se limita a estado efímero de UI.
-- Ejecuta db:check cuando corresponda, db:push y db:seed. Para el cierre usa dibot:verify:fast; corrige únicamente el error exacto y no repitas una auditoría completa del repositorio.
-- En update no abras referencias visuales y no uses drizzle-kit push --force. Añade defaults o columnas nullable y conserva todas las filas existentes; el workflow compara un snapshot antes de aceptar la entrega.
-- dibot:verify:fast exige TypeScript de frontend y servidor, Vite, bundle esbuild de API, metafile, health runtime conectado a Turso, seed no vacío y ESLint.
+- Detente después de implementar; el workflow externo ejecuta una sola vez dibot:verify:fast y después ordena db:push → db:seed → db:verify → build → verify:api → smoke → lint en GitHub Actions.
+- En update carga las referencias visuales existentes y no uses drizzle-kit push --force. Añade defaults o columnas nullable y conserva todas las filas existentes; el workflow compara un snapshot antes de aceptar la entrega.
+- dibot:verify:fast exige contratos, TypeScript de frontend y servidor, y ESLint. dibot:verify:release añade DB, Vite, esbuild, health runtime y smoke test.
 - Trabaja solo en el repositorio actual. No clones, no uses Git, no publiques, no despliegues y no leas ni muestres el contenido de .env.
 `
 }
@@ -288,27 +289,27 @@ async function runInitialAgent(input: WorkflowInput) {
     return superPrompt.cached
   }
 
-  await run('opencode', [...openCodeBase(), '--agent', 'dibot-fast', `UPDATE MODE. Aplica este cambio sin perder la dirección visual, los datos ni la API existentes. Inspecciona solo los archivos afectados y no vuelvas a abrir referencias Mobbin:\n\n${input.prompt}\n${completeAppContract(input)}`], root)
+  await run('opencode', [...openCodeBase(), '--agent', 'dibot-fast', `UPDATE MODE. Aplica este cambio sin perder la dirección visual, los datos ni la API existentes. Lee primero references/mobbin/README.md y las referencias visuales guardadas. Si agregas pantallas o cambias la dirección visual, ejecuta una búsqueda Mobbin complementaria una sola vez; si el cambio es solo de datos/API, conserva las referencias sin buscar de nuevo. Inspecciona solo los archivos afectados:\n\n${input.prompt}\n${completeAppContract(input)}`], root)
   return false
 }
 
 async function verifyFunctionalApp(input: WorkflowInput) {
-  await runCapture('bun', ['run', 'verify:contracts'], root)
-  await runCapture('bun', ['run', 'verify:generated'], root)
-  await runCapture('bun', ['run', 'db:push'], root)
+  await runCapture('bun', ['run', 'dibot:verify:fast'], root)
+  if (input.mode === 'create' || await schemaChanged()) await runCapture('bun', ['run', 'db:push'], root)
   await runCapture('bun', ['run', 'db:seed'], root)
   if (input.mode === 'update') await runCapture('bun', ['run', 'db:snapshot:verify'], root)
-  await runCapture('bun', ['run', 'build'], root)
-  await runCapture('bun', ['run', 'verify:api'], root)
-  await runCapture('bun', ['run', 'test:functional'], root)
   await runCapture('bun', ['run', 'db:verify'], root)
-  await runCapture('bun', ['run', 'lint'], root)
+}
+
+async function schemaChanged() {
+  const output = await runCapture('git', ['status', '--short', '--', 'api/db/schema.ts', 'drizzle'], root)
+  return Boolean(output.trim())
 }
 
 async function repairWithDibotFast(input: WorkflowInput, error: unknown, attempt: number) {
   const output = error instanceof CommandError ? error.output : error instanceof Error ? error.message : String(error)
   const diagnostic = redact(output).slice(-14_000)
-  const instruction = `REPAIR RUN ${attempt}. Tu propia entrega de ${input.appName} aún no pasa la puerta funcional.\n\nFallo exacto:\n${diagnostic}\n\nCorrige únicamente la causa raíz en el archivo afectado. Después ejecuta solo el check relacionado y bun run dibot:verify:fast. No vuelvas a buscar Mobbin, no explores el repositorio completo y no te limites a explicar o recomendar el siguiente paso.${completeAppContract(input)}`
+  const instruction = `REPAIR RUN ${attempt}. Tu propia entrega de ${input.appName} aún no pasa la puerta rápida.\n\nFallo exacto:\n${diagnostic}\n\nCorrige únicamente la causa raíz en el archivo afectado. Después ejecuta solo el check relacionado y bun run dibot:verify:fast. No hagas build, no vuelvas a buscar Mobbin, no explores el repositorio completo y no te limites a explicar o recomendar el siguiente paso.${completeAppContract(input)}`
   await run('opencode', [...openCodeBase(), '--agent', 'dibot-fast', instruction], root)
 }
 
