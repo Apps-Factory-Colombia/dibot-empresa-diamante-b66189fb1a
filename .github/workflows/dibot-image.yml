@@ -21,6 +21,7 @@ jobs:
       DIBOT_REQUIRE_PERSISTENCE: ${{ secrets.TURSO_DATABASE_URL != '' && '1' || '0' }}
       DIBOT_REQUIRE_SEED: ${{ secrets.TURSO_DATABASE_URL != '' && '1' || '0' }}
       DIBOT_APP_NAME: ${{ secrets.DIBOT_APP_NAME }}
+      GHCR_VISIBILITY_TOKEN_CONFIGURED: ${{ secrets.GHCR_VISIBILITY_TOKEN != '' }}
       TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
       TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
       TURSO_DATABASE_ID: ${{ secrets.TURSO_DATABASE_ID }}
@@ -82,7 +83,7 @@ jobs:
             ${{ env.STABLE_TAG }}
 
       - name: Make GHCR package public when configured
-        if: ${{ secrets.GHCR_VISIBILITY_TOKEN != '' }}
+        if: env.GHCR_VISIBILITY_TOKEN_CONFIGURED == 'true'
         env:
           GH_TOKEN: ${{ secrets.GHCR_VISIBILITY_TOKEN }}
         run: |
@@ -91,7 +92,7 @@ jobs:
             -f visibility=public || echo "GHCR package visibility was not changed; configure Dokploy registry credentials for a private package."
 
       - name: Explain private GHCR fallback
-        if: ${{ secrets.GHCR_VISIBILITY_TOKEN == '' }}
+        if: env.GHCR_VISIBILITY_TOKEN_CONFIGURED != 'true'
         run: echo "GHCR package remains private; Dokploy must use DOKPLOY_DOCKER_USERNAME and DOKPLOY_DOCKER_PASSWORD."
 
       - name: Publish release summary
