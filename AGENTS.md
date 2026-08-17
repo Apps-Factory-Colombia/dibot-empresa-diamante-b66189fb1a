@@ -13,6 +13,7 @@ Conserva React, Vite, TypeScript, Bun, Tailwind, Base UI, Motion, Embla, lucide-
 ## UI movil
 
 - Diseña primero para 375–430 px y usa 390 px como referencia.
+- Idioma predeterminado: toda la interfaz, textos, etiquetas, mensajes, placeholders, errores, estados, datos de seed y contenido visible al usuario deben estar en español. Solo cambia a otro idioma si el prompt del usuario lo solicita explícitamente; conserva sin traducir los nombres propios y la marca que el usuario haya indicado.
 - Mantén safe areas, teclado usable y controles de 44–56 px.
 - Define tokens semanticos para fondo, superficies, texto, primary, accent, estados, spacing y radios.
 - Usa una sola direccion visual coherente. Las imagenes son referencia de composicion, no una licencia para copiar marca, logo o assets.

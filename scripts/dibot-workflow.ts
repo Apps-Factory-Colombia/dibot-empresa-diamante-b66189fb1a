@@ -257,6 +257,7 @@ function completeAppContract(input: WorkflowInput) {
   return `
 CONTRATO OBLIGATORIO DEL WORKFLOW
 - Esta es una sesión única de dibot-fast. Entiende el prompt natural, crea internamente un brief funcional/visual compacto y programa de inmediato; no llames a prompt-builder ni repitas el brief como una segunda sesión.
+- Idioma predeterminado obligatorio: toda la app debe quedar en español, incluyendo UI, navegación, botones, formularios, placeholders, mensajes, errores, estados, datos de seed y contenido visible. Solo cambia de idioma si el prompt del usuario lo solicita explícitamente. Conserva nombres propios, marcas y el nombre exacto de la app.
 - En CREATE MODE ejecuta exactamente una búsqueda visual de Mobbin con mobbin_search_screens, selecciona hasta seis referencias relevantes, analiza su lenguaje visual una sola vez y guarda referencias/README en references/mobbin cuando sea posible. No copies pantallas, marcas ni assets.
 - En UPDATE MODE lee siempre references/mobbin/README.md y las referencias visuales antes de modificar la interfaz. Mantén el lenguaje visual existente. Si agregas pantallas o cambias la dirección visual, ejecuta una búsqueda Mobbin complementaria una sola vez; si el cambio es solo de datos/API, no hagas una búsqueda nueva.
 - El producto final debe ser distinto para este pedido: decide una dirección visual original basada en Mobbin, no entregues un dashboard genérico ni una pantalla vacía.

@@ -10,6 +10,8 @@ Si el producto necesita fotografía o ilustraciones reales, agrega una sección 
 
 Entrega únicamente el superprompt en español dentro de un bloque de texto, idealmente de menos de 900 palabras. Debe incluir:
 
+Regla de idioma: el producto se implementa en español por defecto en toda la UI y el contenido visible. Solo cambia de idioma si el prompt del usuario lo solicita explícitamente; conserva nombres propios, marcas y el nombre exacto de la app.
+
 1. Producto, usuarios y objetivo.
 2. Dirección visual única y original.
 3. Pantallas y flujo vertical completo.

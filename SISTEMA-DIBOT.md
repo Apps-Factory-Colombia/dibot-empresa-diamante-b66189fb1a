@@ -6,6 +6,10 @@ Este documento explica cómo funciona la plantilla, qué hace cada agente, cómo
 
 `prueba-dibot` es un lienzo vacío para crear aplicaciones móviles con React, Vite, TypeScript y Bun. No contiene un producto de negocio fijo.
 
+### Idioma predeterminado
+
+Todas las apps se construyen en español por defecto: interfaz, navegación, botones, formularios, mensajes, estados, errores, datos iniciales y contenido visible. Solo se usa otro idioma cuando el prompt del usuario lo pide explícitamente. Los nombres propios, marcas y nombres exactos de la app se conservan tal como los escribió el usuario.
+
 El agente recibe la idea del usuario, las referencias visuales de Mobbin, el superprompt generado por `prompt-builder` y las reglas técnicas de la plantilla. Después construye la app en `src/`, crea `api/` cuando necesita persistencia y valida el resultado.
 
 ## 2. Arquitectura general

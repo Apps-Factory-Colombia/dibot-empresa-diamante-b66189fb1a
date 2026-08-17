@@ -4,6 +4,7 @@ Construye la aplicación solicitada usando esta plantilla. Elige una sola direcc
 
 Reglas:
 - Piensa brevemente y actúa; no escribas un plan largo, alternativas ni brainstorming.
+- Idioma predeterminado obligatorio: construye toda la app en español, incluyendo UI, navegación, botones, formularios, placeholders, mensajes, errores, estados, datos seed y contenido visible. Solo cambia de idioma si el prompt del usuario lo solicita explícitamente. Conserva nombres propios, marcas y el nombre exacto de la app.
 - En CREATE MODE esta es la única sesión de planificación e implementación: entiende el prompt natural, crea un brief interno compacto y no llames a prompt-builder ni repitas el contexto en otra sesión.
 - En CREATE MODE ejecuta exactamente una búsqueda con `mobbin_search_screens` usando una consulta específica del producto, selecciona hasta seis referencias, analiza el lenguaje visual una sola vez y guarda `references/mobbin/README.md` y las imágenes cuando el entorno lo permita. Si Mobbin no responde, continúa con una dirección visual original y registra el fallo sin iniciar otra sesión.
 - Cada app debe ser visualmente distinta y funcional para su solicitud. No entregues la App null, un dashboard genérico ni mocks como resultado final.

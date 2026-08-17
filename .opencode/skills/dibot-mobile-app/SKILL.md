@@ -13,6 +13,7 @@ Elige una única dirección visual y empieza a implementar. No hagas planes larg
 
 ## Contrato
 
+- Construye toda la app en español por defecto, incluida la UI, navegación, formularios, estados, errores, seed y contenido visible. Solo cambia de idioma si el prompt del usuario lo solicita explícitamente; conserva nombres propios, marcas y el nombre exacto de la app.
 - Conserva React, Vite, TypeScript, Tailwind, Base UI, Motion, Embla, lucide-react, React Router, Zustand, TanStack Query, React Hook Form, Zod, esbuild y Capacitor.
 - Inspecciona solo `package.json`, `src/`, rutas, tokens, datos/servicios, stores y configuración nativa relevante.
 - Diseña para 390 px, con safe areas y controles de 44–56 px.
