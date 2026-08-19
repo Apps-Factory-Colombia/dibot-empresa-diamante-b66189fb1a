@@ -42,10 +42,11 @@ console.log(previousFingerprint && previousFingerprint !== fingerprint
   ? '[deps] package.json o bun.lock cambió; actualizando dependencias de esta app...'
   : '[deps] Faltan dependencias de build; ejecutando bun install --frozen-lockfile...')
 
-const installEnvironment = {
-  ...process.env,
-  BUN_INSTALL_CACHE_DIR: process.env.BUN_INSTALL_CACHE_DIR || join(root, '.dibot-runtime', 'bun-cache'),
-}
+// Keep Bun's normal cache unless the Box explicitly provides another one. A
+// workspace-local cache can retain a partially unpacked native package after
+// a failed lifecycle script (notably esbuild), making every retry fail again.
+const installEnvironment = { ...process.env }
+const configuredCacheDirectory = installEnvironment.BUN_INSTALL_CACHE_DIR?.trim()
 
 async function installDependencies(attempt: number): Promise<number> {
   const code = await new Promise<number>((resolve) => {
@@ -75,6 +76,9 @@ async function installDependencies(attempt: number): Promise<number> {
 
   console.warn('[deps] Reparando instalación parcial y reintentando una sola vez...')
   await rm(join(root, 'node_modules'), { recursive: true, force: true })
+  if (configuredCacheDirectory) {
+    await rm(configuredCacheDirectory, { recursive: true, force: true })
+  }
   return installDependencies(attempt + 1)
 }
 
