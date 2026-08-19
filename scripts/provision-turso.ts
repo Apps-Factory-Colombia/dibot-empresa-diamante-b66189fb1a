@@ -72,6 +72,9 @@ async function writeRuntimeEnv(values: Record<string, string>) {
 async function create() {
   const { organizationSlug, groupName, databases } = await context()
   const name = process.env.TURSO_DATABASE_NAME ?? 'dibot-app'
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$/.test(name)) {
+    throw new Error(`Invalid TURSO_DATABASE_NAME "${name}". Use 1-50 lowercase letters, numbers, or hyphens.`)
+  }
   if (databases.some((database) => database.Name === name)) {
     throw new Error(`Database ${name} already exists. Set TURSO_DATABASE_NAME to a new name.`)
   }

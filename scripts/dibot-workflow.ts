@@ -1,5 +1,6 @@
 import { config as loadEnv } from 'dotenv'
 import { spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -58,6 +59,13 @@ function redact(value: string) {
 
 function slug(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+function tursoDatabaseName(input: WorkflowInput) {
+  const base = slug(`${input.appName}-${input.appId}`) || 'dibot-app'
+  const suffix = createHash('sha256').update(`${input.userId}:${input.appId}`).digest('hex').slice(0, 8)
+  const prefix = base.slice(0, 50 - suffix.length - 1).replace(/-+$/g, '') || 'dibot'
+  return `${prefix}-${suffix}`
 }
 
 function parseInput(args: string[]): WorkflowInput {
@@ -241,7 +249,7 @@ async function applyAppMetadata(input: WorkflowInput) {
 
 async function prepareDatabase(input: WorkflowInput) {
   if (input.mode === 'create') {
-    const databaseName = (slug(`${input.appName}-${input.appId}`) || `dibot-${Date.now()}`).slice(0, 60).replace(/-+$/g, '')
+    const databaseName = tursoDatabaseName(input)
     process.env.TURSO_DATABASE_NAME = databaseName
     await run('bun', ['scripts/provision-turso.ts', 'create'], root, { TURSO_DATABASE_NAME: databaseName })
     loadEnv({ path: join(root, '.env'), override: true })
