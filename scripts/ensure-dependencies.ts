@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
 const root = process.cwd()
 const esbuildPlatformBinary = join(
@@ -59,7 +59,6 @@ const installEnvironment = {
   ...process.env,
   BUN_FEATURE_FLAG_DISABLE_NATIVE_DEPENDENCY_LINKER: '1',
 }
-const configuredCacheDirectory = installEnvironment.BUN_INSTALL_CACHE_DIR?.trim()
 const configuredTimeout = Number.parseInt(installEnvironment.DIBOT_BUN_INSTALL_TIMEOUT_MS ?? '', 10)
 const installTimeoutMs = Number.isFinite(configuredTimeout)
   ? Math.min(Math.max(configuredTimeout, 30_000), 600_000)
@@ -130,8 +129,8 @@ async function installDependencies(): Promise<number> {
       description: 'La instalación de dependencias',
     },
     {
-      args: ['install', '--frozen-lockfile', '--ignore-scripts', '--no-cache'],
-      description: 'El reintento limpio de dependencias',
+      args: ['install', '--frozen-lockfile', '--ignore-scripts', '--no-cache', '--force'],
+      description: 'El reintento completo de dependencias',
     },
   ]
 
@@ -145,11 +144,7 @@ async function installDependencies(): Promise<number> {
       return code || 1
     }
 
-    console.warn('[deps] Reparando instalación parcial y reintentando con caché limpia...')
-    await rm(join(root, 'node_modules'), { recursive: true, force: true })
-    if (configuredCacheDirectory) {
-      await rm(configuredCacheDirectory, { recursive: true, force: true })
-    }
+    console.warn('[deps] Instalación parcial; reintentando sin borrar el directorio de trabajo...')
   }
 
   return 1
