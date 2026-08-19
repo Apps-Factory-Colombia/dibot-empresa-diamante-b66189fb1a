@@ -126,11 +126,11 @@ async function runInstall(args: string[], description: string): Promise<number> 
 async function installDependencies(): Promise<number> {
   const attempts = [
     {
-      args: ['install', '--frozen-lockfile', '--ignore-scripts', '--backend=copyfile'],
+      args: ['install', '--frozen-lockfile', '--ignore-scripts'],
       description: 'La instalación de dependencias',
     },
     {
-      args: ['install', '--frozen-lockfile', '--ignore-scripts', '--backend=copyfile', '--no-cache'],
+      args: ['install', '--frozen-lockfile', '--ignore-scripts', '--no-cache'],
       description: 'El reintento limpio de dependencias',
     },
   ]
