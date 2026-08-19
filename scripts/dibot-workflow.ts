@@ -320,9 +320,10 @@ async function main() {
   try {
     const input = parseInput(process.argv.slice(2))
     const registeredApp = await findRegisteredApp(input)
+    const partialCreateRecovery = process.env.DIBOT_PARTIAL_CREATE_RECOVERY === '1'
     if (input.mode === 'create') {
-      if (registeredApp) throw new Error(`La app ${input.appId} ya existe; create no reutiliza apps.`)
-      await registerApp(input)
+      if (registeredApp && !partialCreateRecovery) throw new Error(`La app ${input.appId} ya existe; create no reutiliza apps.`)
+      if (!registeredApp) await registerApp(input)
     } else {
       if (!registeredApp) throw new Error(`La app ${input.appId} no existe; update no crea apps.`)
       const owner = firstString(registeredApp, ['userId', 'user_id'])
