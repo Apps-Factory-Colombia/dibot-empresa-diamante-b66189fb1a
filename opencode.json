@@ -6,7 +6,10 @@
       "type": "remote",
       "url": "https://api.mobbin.com/mcp",
       "enabled": true,
-      "timeout": 90000
+      "timeout": 90000,
+      "oauth": {
+        "callbackPort": 19876
+      }
     }
   },
   "agent": {
