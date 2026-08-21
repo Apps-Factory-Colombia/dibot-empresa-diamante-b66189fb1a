@@ -7,9 +7,8 @@ await db.insert(appMeta).values({
   id: 'app',
   appName,
   updatedAt: new Date(),
-}).onConflictDoUpdate({
+}).onConflictDoNothing({
   target: appMeta.id,
-  set: { appName, updatedAt: new Date() },
 })
 
 console.log(`[seed] Base metadata preparada para ${appName}.`)
