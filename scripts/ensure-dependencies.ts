@@ -59,7 +59,7 @@ const installEnvironment = {
   ...process.env,
   BUN_FEATURE_FLAG_DISABLE_NATIVE_DEPENDENCY_LINKER: '1',
 }
-const configuredTimeout = Number.parseInt(installEnvironment.DIBOT_BUN_INSTALL_TIMEOUT_MS ?? '', 10)
+const configuredTimeout = Number.parseInt(process.env.DIBOT_BUN_INSTALL_TIMEOUT_MS ?? '', 10)
 const installTimeoutMs = Number.isFinite(configuredTimeout)
   ? Math.min(Math.max(configuredTimeout, 30_000), 600_000)
   : 180_000

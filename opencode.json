@@ -23,6 +23,9 @@
         "mobbin_*": true
       },
       "permission": {
+        "external_directory": {
+          "/home/user/dibot/apps/**": "allow"
+        },
         "bash": {
           "*": "allow",
           "*drizzle-kit*push*--force*": "deny",

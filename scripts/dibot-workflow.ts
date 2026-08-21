@@ -349,7 +349,7 @@ async function main() {
     const openCodeStartedAt = Date.now()
     const superPromptCached = await runInitialAgent(input)
     let repairRuns = 0
-    const maxRepairRuns = Math.max(0, Math.min(2, Number(process.env.DIBOT_MAX_REPAIR_RUNS ?? 1)))
+    const maxRepairRuns = Math.max(0, Math.min(2, Number(process.env.DIBOT_MAX_REPAIR_RUNS ?? 2)))
 
     while (true) {
       try {
