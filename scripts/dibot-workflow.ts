@@ -176,6 +176,10 @@ class DibotReporter {
     })
     this.jobId = firstString(result, ['jobId', 'id'])
     if (!this.jobId) throw new Error('DIBOT_AGENT_DATA_API no devolvió jobId.')
+    // The Box/Local orchestrator polls this output while the workflow is still
+    // running. Emit the id immediately so concurrent executions for the same
+    // app can never be confused with the most recently updated job.
+    console.log(`Workflow (${this.input.mode}) iniciado. jobId=${this.jobId}`)
   }
 
   async update(currentStep: string) {
