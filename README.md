@@ -32,7 +32,7 @@ Usa una sola sesión de `dibot-fast` con `gpt-5.6-luna` en `medium`: entiende el
 El workflow recibe el nombre, registra el job, provisiona una base Turso nueva en `create`, ejecuta `dibot-fast` y exige schema, seed, API, frontend conectado, TypeScript y lint sin compilar producción en el PC. Después publica GitHub; GitHub Actions ejecuta `dibot:verify:release`, crea una imagen Docker runtime y la publica en GHCR. Dokploy recibe esa imagen, hace pull y arranca el contenedor sin clonar ni volver a compilar.
 
 ```powershell
-$env:DIBOT_API_URL='https://api-dibot.appsfactory.com.co'
+$env:DIBOT_API_URL='https://api.dibot.co'
 $env:DIBOT_AGENT_API_TOKEN='...'
 
 # App nueva: nombre, registro, Turso y una sesión dibot-fast
