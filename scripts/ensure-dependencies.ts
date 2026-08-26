@@ -2,9 +2,10 @@ import { existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 
 const root = process.cwd()
+const nodeModulesDirectory = join(root, 'node_modules')
 const esbuildPlatformBinary = join(
   root,
   'node_modules',
@@ -68,6 +69,13 @@ function dependenciesReady() {
   return requiredBinaries.every((file) => existsSync(file))
 }
 
+async function removeIncompleteInstall() {
+  // Only remove the generated dependency directory. Keep the workspace,
+  // source files, .env and .dibot context intact so a retry cannot delete its
+  // current working directory or lose the user's request.
+  await rm(nodeModulesDirectory, { recursive: true, force: true })
+}
+
 async function runInstall(args: string[], description: string): Promise<number> {
   return new Promise<number>((resolve) => {
     let settled = false
@@ -125,16 +133,18 @@ async function runInstall(args: string[], description: string): Promise<number> 
 async function installDependencies(): Promise<number> {
   const attempts = [
     {
-      args: ['install', '--frozen-lockfile', '--ignore-scripts'],
+      args: ['install', '--frozen-lockfile', '--ignore-scripts', '--backend=hardlink'],
       description: 'La instalación de dependencias',
     },
     {
-      args: ['install', '--frozen-lockfile', '--ignore-scripts', '--no-cache', '--force'],
+      args: ['install', '--frozen-lockfile', '--ignore-scripts', '--backend=hardlink', '--no-cache', '--force'],
       description: 'El reintento completo de dependencias',
     },
   ]
 
+  await removeIncompleteInstall()
   for (let attempt = 0; attempt < attempts.length; attempt += 1) {
+    if (attempt > 0) await removeIncompleteInstall()
     const current = attempts[attempt]
     const code = await runInstall(current.args, current.description)
     if (code === 0 && dependenciesReady()) return 0
@@ -144,7 +154,7 @@ async function installDependencies(): Promise<number> {
       return code || 1
     }
 
-    console.warn('[deps] Instalación parcial; reintentando sin borrar el directorio de trabajo...')
+    console.warn('[deps] Instalación parcial; eliminando solo node_modules y reintentando desde el workspace estable...')
   }
 
   return 1
