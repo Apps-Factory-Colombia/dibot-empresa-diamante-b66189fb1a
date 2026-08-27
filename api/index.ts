@@ -1,6 +1,6 @@
 import { desc, eq } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
-import { appMeta, attentionRequests, services } from './db/schema'
+import { appMeta, attentionRequests, menuCards, services } from './db/schema'
 import { db } from './db/client'
 import { json, readJson, startApiServer } from './server'
 
@@ -26,6 +26,7 @@ async function handler(request: Request): Promise<Response> {
   }
 
   if (request.method === 'GET' && url.pathname === '/api/services') return json({ data: await db.select().from(services) })
+  if (request.method === 'GET' && url.pathname === '/api/menu-cards') return json({ data: await db.select().from(menuCards).orderBy(menuCards.order) })
   if (request.method === 'GET' && url.pathname === '/api/requests') return json({ data: await db.select().from(attentionRequests).orderBy(desc(attentionRequests.createdAt)) })
   if (request.method === 'POST' && url.pathname === '/api/requests') {
     const body = await readJson<Partial<typeof attentionRequests.$inferInsert>>(request)

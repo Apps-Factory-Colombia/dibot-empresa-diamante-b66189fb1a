@@ -32,3 +32,14 @@ export const attentionRequests = sqliteTable('attention_requests', {
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 })
+
+export const menuCards = sqliteTable('menu_cards', {
+  id: text('id').primaryKey(),
+  serviceId: text('service_id').notNull(),
+  order: integer('menu_order').notNull(),
+  title: text('title').notNull(),
+  subtitle: text('subtitle').notNull(),
+  description: text('description').notNull(),
+  color: text('color').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+})
