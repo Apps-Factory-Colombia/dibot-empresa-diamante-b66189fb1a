@@ -23,7 +23,7 @@ await db.insert(services).values([
 
 await db.insert(menuCards).values([
   { id: 'carta-adultos', serviceId: 'restaurante', order: 1, title: 'Carta para Adultos', subtitle: 'Sabores de la casa', description: 'Platos con carácter, ingredientes frescos y ese toque Diamante que vuelve especial cada sobremesa.', color: 'rose', createdAt: now },
-  { id: 'carta-ninos', serviceId: 'restaurante', order: 2, title: 'Carta para Niños', subtitle: 'Pequeños grandes favoritos', description: 'Opciones divertidas y equilibradas para que los más pequeños también celebren a la mesa.', color: 'lilac', createdAt: now },
+  { id: 'carta-ninos', serviceId: 'restaurante', order: 2, title: 'Carta para Niños', subtitle: 'Pequeños grandes favoritos', description: 'Opciones divertidas y equilibradas para que los más pequeños también celebren cada sabor.', color: 'lilac', createdAt: now },
   { id: 'carta-temporada', serviceId: 'restaurante', order: 3, title: 'Carta de Temporada', subtitle: 'Lo mejor de cada estación', description: 'Una selección que cambia con el mercado para servir lo más fresco, colorido y delicioso.', color: 'gold', createdAt: now },
   { id: 'carta-bebidas', serviceId: 'restaurante', order: 4, title: 'Carta de Bebidas', subtitle: 'Brindis con brillo', description: 'Cócteles, aguas frescas, vinos y bebidas sin alcohol para acompañar tu momento.', color: 'sky', createdAt: now },
 ]).onConflictDoNothing({ target: menuCards.id })
