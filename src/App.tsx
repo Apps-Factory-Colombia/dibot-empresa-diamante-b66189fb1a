@@ -1,7 +1,33 @@
-/**
- * Empty canvas for generated apps.
- * The agent creates the product screens from the user's brief and references.
- */
-export default function App() {
-  return null
+import { useState, type ReactNode } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { useNavigate, useRoutes } from 'react-router'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { ArrowRight, CalendarDays, ChevronLeft, Clock3, Heart, MapPin, MessageCircle, Utensils, Sparkles } from 'lucide-react'
+
+type Service = { id: string; name: string; description: string; detail: string; accent: string }
+const formSchema = z.object({ name: z.string().min(2, 'Escribe tu nombre'), address: z.string().min(3, 'Indica tu dirección'), location: z.string().min(2, 'Indica tu ubicación'), whatsapp: z.string().min(8, 'Escribe un WhatsApp válido'), serviceId: z.string().min(1, 'Elige un servicio'), message: z.string().max(300).optional() })
+type FormData = z.infer<typeof formSchema>
+
+async function getServices() { const response = await fetch('/api/services'); if (!response.ok) throw new Error('No pudimos cargar los servicios'); return (await response.json() as { data: Service[] }).data }
+async function sendRequest(data: FormData) { const response = await fetch('/api/requests', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }); if (!response.ok) throw new Error((await response.json() as { error?: string }).error ?? 'No pudimos enviar tu solicitud'); return response.json() }
+
+function Shell({ children }: { children: ReactNode }) {
+  const navigate = useNavigate()
+  return <main className="app-shell"><header className="topbar"><button className="brand" onClick={() => navigate('/')} aria-label="Ir al inicio"><span className="diamond">✦</span><span>Empresa<br /><b>Diamante</b></span></button><button className="icon-button" onClick={() => navigate('/solicitar')} aria-label="Solicitar atención"><MessageCircle size={20} /></button></header>{children}<footer><span>Hecho para celebrar lo extraordinario</span><Heart size={14} fill="currentColor" /></footer></main>
 }
+
+function Home() {
+  const navigate = useNavigate(); const { data, isLoading, isError } = useQuery({ queryKey: ['services'], queryFn: getServices })
+  return <Shell><section className="hero"><div className="eyebrow"><span className="sparkle">✦</span> Un espacio para brillar</div><h1>Momentos<br /><em>inolvidables</em></h1><p>Sabores, celebraciones e ideas con ese toque especial que solo encuentras en Empresa Diamante.</p><button className="primary-button" onClick={() => navigate('/solicitar')}>Quiero atención personalizada <ArrowRight size={18} /></button><div className="hero-orbit"><div className="orbit-ring" /><div className="hero-star">✦</div><span className="orbit-label">Tu día<br /><b>merece más</b></span></div></section><section className="quick-info"><div><Clock3 size={19} /><span><b>Hoy abierto</b><small>8:00 am — 7:00 pm</small></span></div><div><MapPin size={19} /><span><b>Visítanos</b><small>Encuentra tu celebración</small></span></div></section><section className="services"><div className="section-heading"><span>Lo que hacemos</span><b>Servicios <i>con brillo</i></b></div>{isLoading && <div className="state">Cargando experiencias…</div>}{isError && <div className="state error">No pudimos cargar los servicios. Intenta de nuevo.</div>}<div className="service-list">{data?.map((service, index) => <button className={`service-card ${service.accent}`} key={service.id} onClick={() => navigate('/solicitar')}><span className="service-number">0{index + 1}</span><span className="service-icon">{index === 0 ? <Utensils /> : index === 1 ? <CalendarDays /> : <Sparkles />}</span><span className="service-copy"><b>{service.name}</b><small>{service.description}</small></span><ArrowRight size={18} /></button>)}</div></section></Shell>
+}
+
+function RequestPage() {
+  const navigate = useNavigate(); const [sent, setSent] = useState(false); const { data: services, isLoading } = useQuery({ queryKey: ['services'], queryFn: getServices }); const mutation = useMutation({ mutationFn: sendRequest, onSuccess: () => setSent(true) });
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(formSchema), defaultValues: { serviceId: '' } })
+  if (sent) return <Shell><section className="success"><div className="success-mark">✦</div><span className="eyebrow">Solicitud recibida</span><h1>Vamos a hacer<br /><em>magia juntos.</em></h1><p>Gracias por confiar en nosotros. Muy pronto te escribiremos por WhatsApp para conocerte mejor.</p><button className="primary-button" onClick={() => navigate('/')}>Volver al inicio <ArrowRight size={18} /></button></section></Shell>
+  return <Shell><section className="request"><button className="back" onClick={() => navigate('/')}><ChevronLeft size={18} /> Volver</button><span className="eyebrow">Cuéntanos tu idea</span><h1>Hagamos algo<br /><em>increíble.</em></h1><p className="intro">Déjanos tus datos y te contactaremos para darle forma a tu próximo momento especial.</p><form onSubmit={handleSubmit((values) => mutation.mutate(values))}><label>Tu nombre<input {...register('name')} placeholder="¿Cómo te llamas?" />{errors.name && <small className="field-error">{errors.name.message}</small>}</label><label>Servicio que te interesa<select {...register('serviceId')}><option value="">Elige una opción</option>{isLoading ? <option>Cargando…</option> : services?.map((service) => <option value={service.id} key={service.id}>{service.name}</option>)}</select>{errors.serviceId && <small className="field-error">{errors.serviceId.message}</small>}</label><div className="form-row"><label>Dirección<input {...register('address')} placeholder="Calle y número" />{errors.address && <small className="field-error">{errors.address.message}</small>}</label><label>Ubicación<input {...register('location')} placeholder="Colonia / ciudad" />{errors.location && <small className="field-error">{errors.location.message}</small>}</label></div><label>WhatsApp<input {...register('whatsapp')} placeholder="10 dígitos" inputMode="tel" />{errors.whatsapp && <small className="field-error">{errors.whatsapp.message}</small>}</label><label>Cuéntanos un poco más <textarea {...register('message')} placeholder="Fecha, número de invitados, tipo de evento…" rows={3} /></label>{mutation.isError && <div className="form-error">{mutation.error.message}</div>}<button className="primary-button submit" disabled={isSubmitting || mutation.isPending}>{mutation.isPending ? 'Enviando…' : 'Enviar mi solicitud'} <ArrowRight size={18} /></button></form></section></Shell>
+}
+
+export default function App() { return useRoutes([{ path: '/', element: <Home /> }, { path: '/solicitar', element: <RequestPage /> }]) }

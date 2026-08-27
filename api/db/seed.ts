@@ -1,7 +1,7 @@
-import { appMeta } from './schema'
+import { appMeta, attentionRequests, services } from './schema'
 import { db } from './client'
 
-const appName = process.env.DIBOT_APP_NAME?.trim() || 'Dibot App'
+const appName = 'Empresa Diamante'
 
 await db.insert(appMeta).values({
   id: 'app',
@@ -12,3 +12,24 @@ await db.insert(appMeta).values({
 })
 
 console.log(`[seed] Base metadata preparada para ${appName}.`)
+
+const now = new Date()
+await db.insert(services).values([
+  { id: 'restaurante', name: 'Restaurante', description: 'Sabor que se celebra', detail: 'Desayunos, comidas y momentos ricos de 8:00 a 19:00.', accent: 'coral', createdAt: now },
+  { id: 'eventos', name: 'Salón de Eventos', description: 'Tu ocasión, en grande', detail: 'Un espacio rosa y elegante para celebrar a tu manera.', accent: 'lilac', createdAt: now },
+  { id: 'banquetes', name: 'Banquetes', description: 'Menús que dejan huella', detail: 'Propuestas deliciosas para grupos, fiestas y reuniones.', accent: 'gold', createdAt: now },
+  { id: 'publicidad', name: 'Publicidad', description: 'Haz que te recuerden', detail: 'Ideas creativas para darle brillo a tu marca.', accent: 'pink', createdAt: now },
+]).onConflictDoNothing({ target: services.id })
+
+await db.insert(attentionRequests).values({
+  id: 'solicitud-inicial',
+  name: 'Mariana López',
+  address: 'Av. Diamante 120',
+  location: 'Ciudad de México',
+  whatsapp: '+52 55 1234 5678',
+  serviceId: 'eventos',
+  message: 'Me gustaría conocer las opciones para una celebración familiar.',
+  status: 'pendiente',
+  createdAt: now,
+  updatedAt: now,
+}).onConflictDoNothing({ target: attentionRequests.id })

@@ -10,3 +10,25 @@ export const appMeta = sqliteTable('app_meta', {
   appName: text('app_name').notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 })
+
+export const services = sqliteTable('services', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  detail: text('detail').notNull(),
+  accent: text('accent').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+})
+
+export const attentionRequests = sqliteTable('attention_requests', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  address: text('address').notNull(),
+  location: text('location').notNull(),
+  whatsapp: text('whatsapp').notNull(),
+  serviceId: text('service_id').notNull(),
+  message: text('message').notNull(),
+  status: text('status').notNull().default('pendiente'),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+})
