@@ -15,10 +15,10 @@ console.log(`[seed] Base metadata preparada para ${appName}.`)
 
 const now = new Date()
 await db.insert(services).values([
-  { id: 'restaurante', name: 'Restaurante', description: 'Sabor que se celebra', detail: 'De Lunes a Viernes de 8 am a 7 pm, Sabado y Domingo de 8 am a 5 pm.', accent: 'coral', createdAt: now },
-  { id: 'eventos', name: 'Salón de Eventos', description: 'Tu ocasión, en grande', detail: 'Un espacio rosa y elegante para celebrar a tu manera.', accent: 'lilac', createdAt: now },
-  { id: 'banquetes', name: 'Banquetes', description: 'Menús que dejan huella', detail: 'Propuestas deliciosas para grupos, fiestas y reuniones.', accent: 'gold', createdAt: now },
-  { id: 'publicidad', name: 'Publicidad', description: 'Haz que te recuerden', detail: 'Ideas creativas para darle brillo a tu marca.', accent: 'pink', createdAt: now },
+  { id: 'restaurante', name: 'Restaurante', description: 'Sabor Que Se Celebra', detail: 'De Lunes A Viernes De 8 Am A 7 Pm, Sábado Y Domingo De 8 Am A 5 Pm.', accent: 'coral', createdAt: now },
+  { id: 'eventos', name: 'Salón De Eventos', description: 'Tu Ocasión, En Grande', detail: 'Un Espacio Rosa Y Elegante Para Celebrar A Tu Manera.', accent: 'lilac', createdAt: now },
+  { id: 'banquetes', name: 'Banquetes', description: 'Menús Que Dejan Huella', detail: 'Propuestas Deliciosas Para Grupos, Fiestas Y Reuniones.', accent: 'gold', createdAt: now },
+  { id: 'publicidad', name: 'Publicidad', description: 'Haz Que Te Recuerden', detail: 'Ideas Creativas Para Darle Brillo A Tu Marca.', accent: 'pink', createdAt: now },
 ]).onConflictDoNothing({ target: services.id })
 
 await db.insert(attentionRequests).values({
@@ -28,7 +28,7 @@ await db.insert(attentionRequests).values({
   location: 'Ciudad de México',
   whatsapp: '+52 55 1234 5678',
   serviceId: 'eventos',
-  message: 'Me gustaría conocer las opciones para una celebración familiar.',
+  message: 'Me Gustaría Conocer Las Opciones Para Una Celebración Familiar.',
   status: 'pendiente',
   createdAt: now,
   updatedAt: now,
