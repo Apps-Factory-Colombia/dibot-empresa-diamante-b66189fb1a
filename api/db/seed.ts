@@ -15,7 +15,7 @@ console.log(`[seed] Base metadata preparada para ${appName}.`)
 
 const now = new Date()
 await db.insert(services).values([
-  { id: 'restaurante', name: 'Restaurante', description: 'Sabor que se celebra', detail: 'Desayunos, comidas y momentos ricos de 8:00 a 19:00.', accent: 'coral', createdAt: now },
+  { id: 'restaurante', name: 'Restaurante', description: 'Sabor que se celebra', detail: 'De Lunes a Viernes de 8 am a 7 pm, Sabado y Domingo de 8 am a 5 pm.', accent: 'coral', createdAt: now },
   { id: 'eventos', name: 'Salón de Eventos', description: 'Tu ocasión, en grande', detail: 'Un espacio rosa y elegante para celebrar a tu manera.', accent: 'lilac', createdAt: now },
   { id: 'banquetes', name: 'Banquetes', description: 'Menús que dejan huella', detail: 'Propuestas deliciosas para grupos, fiestas y reuniones.', accent: 'gold', createdAt: now },
   { id: 'publicidad', name: 'Publicidad', description: 'Haz que te recuerden', detail: 'Ideas creativas para darle brillo a tu marca.', accent: 'pink', createdAt: now },
