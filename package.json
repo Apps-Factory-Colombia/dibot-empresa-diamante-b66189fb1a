@@ -39,6 +39,7 @@
     "dibot:workflow": "bun run ensure:deps && bun scripts/dibot-workflow.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1120.0",
     "@base-ui/react": "^1.7.0",
     "@hookform/resolvers": "^5.9.0",
     "@libsql/client": "^0.17.4",

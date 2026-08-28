@@ -1,5 +1,6 @@
 import { appMeta, attentionRequests, menuCards, services } from './schema'
 import { db } from './client'
+import { seedMenuProducts } from './bootstrap'
 
 const appName = 'Empresa Diamante'
 
@@ -40,3 +41,7 @@ await db.insert(attentionRequests).values({
   createdAt: now,
   updatedAt: now,
 }).onConflictDoNothing({ target: attentionRequests.id })
+
+await seedMenuProducts()
+
+console.log('[seed] 104 productos de la carta preparados para el catálogo.')

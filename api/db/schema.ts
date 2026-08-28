@@ -43,3 +43,18 @@ export const menuCards = sqliteTable('menu_cards', {
   color: text('color').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 })
+
+export const menuProducts = sqliteTable('menu_products', {
+  id: text('id').primaryKey(),
+  sourceNumber: integer('source_number').notNull(),
+  section: text('section').notNull(),
+  category: text('category').notNull(),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  price: integer('price').notNull(),
+  imageKey: text('image_key'),
+  available: integer('available', { mode: 'boolean' }).notNull().default(true),
+  sortOrder: integer('sort_order').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+})
