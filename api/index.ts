@@ -14,7 +14,6 @@ type ProductInput = {
   description?: string
   price?: number | string
   available?: boolean
-  sortOrder?: number | string
 }
 
 function toProductResponse(product: typeof menuProducts.$inferSelect) {
@@ -109,8 +108,8 @@ async function handler(request: Request): Promise<Response> {
     return json({ ok: true, data: { email: body.email } }, { headers: { 'set-cookie': adminLoginResponse() } })
   }
   if (request.method === 'POST' && pathname === '/api/admin/logout') return json({ ok: true }, { headers: { 'set-cookie': adminLogoutResponse() } })
+  if (request.method === 'GET' && pathname === '/api/admin/me') return json({ ok: true, authenticated: isAdminRequest(request) })
   if (pathname.startsWith('/api/admin/') && !isAdminRequest(request)) return json({ error: 'Inicia sesión como administrador.' }, { status: 401 })
-  if (request.method === 'GET' && pathname === '/api/admin/me') return json({ ok: true })
 
   if (request.method === 'GET' && pathname === '/api/admin/requests') {
     const requests = await db.select().from(attentionRequests).orderBy(desc(attentionRequests.createdAt))
@@ -134,10 +133,11 @@ async function handler(request: Request): Promise<Response> {
   if (request.method === 'POST' && pathname === '/api/admin/products') {
     const body = await readJson<ProductInput>(request)
     const name = requiredText(body.name, 'El nombre')
+    const lastProduct = await db.select({ sortOrder: menuProducts.sortOrder }).from(menuProducts).orderBy(desc(menuProducts.sortOrder)).limit(1)
     const now = new Date()
     const product = {
       id: randomUUID(), sourceNumber: 1000 + Math.floor(Math.random() * 999000), section: requiredText(body.section, 'La sección'), category: requiredText(body.category, 'La categoría'), name,
-      description: body.description?.trim() ?? '', price: positiveNumber(body.price), available: body.available ?? true, sortOrder: positiveNumber(body.sortOrder, 999), createdAt: now, updatedAt: now,
+      description: body.description?.trim() ?? '', price: positiveNumber(body.price), available: body.available ?? true, sortOrder: Number(lastProduct[0]?.sortOrder ?? 0) + 1, createdAt: now, updatedAt: now,
     }
     await db.insert(menuProducts).values(product)
     return json({ data: toProductResponse({ ...product, imageKey: null }) }, { status: 201 })
@@ -167,7 +167,6 @@ async function handler(request: Request): Promise<Response> {
     if (body.description !== undefined) patch.description = body.description.trim()
     if (body.price !== undefined) patch.price = positiveNumber(body.price)
     if (body.available !== undefined) patch.available = body.available
-    if (body.sortOrder !== undefined) patch.sortOrder = positiveNumber(body.sortOrder)
     await db.update(menuProducts).set(patch).where(eq(menuProducts.id, productId))
     const updated = await db.select().from(menuProducts).where(eq(menuProducts.id, productId)).limit(1)
     return updated[0] ? json({ data: toProductResponse(updated[0]) }) : json({ error: 'Producto no encontrado.' }, { status: 404 })
