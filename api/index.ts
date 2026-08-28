@@ -112,6 +112,20 @@ async function handler(request: Request): Promise<Response> {
   if (pathname.startsWith('/api/admin/') && !isAdminRequest(request)) return json({ error: 'Inicia sesión como administrador.' }, { status: 401 })
   if (request.method === 'GET' && pathname === '/api/admin/me') return json({ ok: true })
 
+  if (request.method === 'GET' && pathname === '/api/admin/requests') {
+    const requests = await db.select().from(attentionRequests).orderBy(desc(attentionRequests.createdAt))
+    return json({ data: requests })
+  }
+  const adminRequestMatch = pathname.match(/^\/api\/admin\/requests\/([^/]+)$/)
+  if (adminRequestMatch && request.method === 'PATCH') {
+    const body = await readJson<{ status?: string }>(request)
+    const status = body.status?.trim()
+    if (!status || !['pendiente', 'atendida', 'cancelada'].includes(status)) return json({ error: 'Estado de solicitud no válido.' }, { status: 400 })
+    await db.update(attentionRequests).set({ status, updatedAt: new Date() }).where(eq(attentionRequests.id, decodeURIComponent(adminRequestMatch[1])))
+    const updated = await db.select().from(attentionRequests).where(eq(attentionRequests.id, decodeURIComponent(adminRequestMatch[1]))).limit(1)
+    return updated[0] ? json({ data: updated[0] }) : json({ error: 'Solicitud no encontrada.' }, { status: 404 })
+  }
+
   if (request.method === 'GET' && pathname === '/api/admin/products') {
     const products = await db.select().from(menuProducts).orderBy(asc(menuProducts.sortOrder))
     return json({ data: products.map(toProductResponse) })
