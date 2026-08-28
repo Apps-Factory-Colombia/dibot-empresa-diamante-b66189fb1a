@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
 import { appMeta, attentionRequests, menuCards, menuProducts, services } from './db/schema'
 import { db } from './db/client'
@@ -66,7 +66,7 @@ async function handler(request: Request): Promise<Response> {
     const filters = [eq(menuProducts.available, true)]
     if (section) filters.push(eq(menuProducts.section, section))
     if (category) filters.push(eq(menuProducts.category, category))
-    const products = await db.select().from(menuProducts).where(and(...filters)).orderBy(asc(menuProducts.sortOrder))
+    const products = await db.select().from(menuProducts).where(and(...filters)).orderBy(desc(menuProducts.sortOrder))
     return json({ data: products.map(toProductResponse) })
   }
 
@@ -126,7 +126,7 @@ async function handler(request: Request): Promise<Response> {
   }
 
   if (request.method === 'GET' && pathname === '/api/admin/products') {
-    const products = await db.select().from(menuProducts).orderBy(asc(menuProducts.sortOrder))
+    const products = await db.select().from(menuProducts).orderBy(desc(menuProducts.sortOrder))
     return json({ data: products.map(toProductResponse) })
   }
 
